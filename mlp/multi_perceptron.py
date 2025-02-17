@@ -12,7 +12,7 @@ class MultilayerPerceptron:
         """
         self.layers = layers
         
-
+    # Finished
     def forward(self, x: np.ndarray) -> np.ndarray:
         """
         This takes the network input and computes the network output (forward propagation)

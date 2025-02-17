@@ -23,6 +23,7 @@ class ActivationFunction(ABC):
         """
         pass
 
+# Finished
 class Linear(ActivationFunction):
     def forward(self, x):
         return x
@@ -31,6 +32,7 @@ class Linear(ActivationFunction):
         func = self.forward(x)
         return np.ones_like(func)
 
+# Finished
 class Sigmoid(ActivationFunction):
     def forward(self, x):
         return 1 / (1+np.exp(-x))
@@ -40,6 +42,7 @@ class Sigmoid(ActivationFunction):
         dy_dx = y * (1 - y) 
         return dy_dx
 
+# Finished
 class Tanh(ActivationFunction):
     def forward(self, x):
         return (np.exp(x) - np.exp(-x)) / (np.exp(x) + np.exp(-x))
@@ -49,7 +52,7 @@ class Tanh(ActivationFunction):
         dy_dx = 1 - np.square(func)
         return dy_dx
 
-
+# Finished
 class Relu(ActivationFunction):
     def forward(self, x):
         return np.maximum(0, x)

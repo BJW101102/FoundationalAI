@@ -3,6 +3,7 @@ import numpy as np
 from typing import Tuple
 
 class Layer:
+    # Finished
     def __init__(self, fan_in: int, fan_out: int, activation_function: ActivationFunction):
         """
         Initializes a layer of neurons
@@ -26,7 +27,7 @@ class Layer:
         self.W = np.random.uniform(low=-limit, high=limit, size=(self.fan_in, self.fan_out))
         self.b = np.zeros(self.fan_out)  
 
-
+    # Finished
     def forward(self, h: np.ndarray) -> np.ndarray:
         """
         Computes the activations for this layer

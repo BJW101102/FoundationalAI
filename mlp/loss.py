@@ -12,6 +12,7 @@ class LossFunction(ABC):
         pass
 
 
+ # Finished
 class SquaredError(LossFunction):
     def loss(self, y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
         return (y_true - y_pred) ** 2 
