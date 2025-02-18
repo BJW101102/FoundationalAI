@@ -2,9 +2,6 @@
 import struct
 import numpy as np
 import matplotlib.pyplot as plt
-import random
-from abc import ABC, abstractmethod
-from typing import Tuple
 from array import array
 from os.path import join
 
@@ -43,7 +40,18 @@ class MnistDataloader(object):
         x_test, y_test = self.read_images_labels(self.test_images_filepath, self.test_labels_filepath)
         return (x_train, y_train),(x_test, y_test)   
     
+
+def convert_data(x, y) -> tuple[np.ndarray, np.ndarray]:
+    x = np.array(x) 
+    y = np.array(y)
+    n_samples = len(x)  # Get the total number of samples.
+    num_classes = len(np.unique(y))
+
     
+    x = x.reshape(n_samples, -1)  # Flatten each image to a 1D vector.
+    y = np.zeros(y.shape[0] * num_classes)
+    return x, y
+
 def load_mnist_data():
     input_path = './datasets'
     training_images_filepath = join(input_path, 'train-images-idx3-ubyte/train-images-idx3-ubyte')
@@ -53,4 +61,8 @@ def load_mnist_data():
 
     mnist_dataloader = MnistDataloader(training_images_filepath, training_labels_filepath, test_images_filepath, test_labels_filepath)
     (x_train, y_train), (x_test, y_test) = mnist_dataloader.load_data()
+
+    x_train, y_train = convert_data(x_train, y_train)
+    x_test, y_test = convert_data(x_test, y_test)
+    
     return (x_train, y_train), (x_test, y_test)

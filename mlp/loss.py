@@ -15,12 +15,13 @@ class LossFunction(ABC):
  # Finished
 class SquaredError(LossFunction):
     def loss(self, y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
-        return (y_true - y_pred) ** 2 
+        return 0.5 * (y_true - y_pred) ** 2 
         
     def derivative(self, y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
-        loss = self.loss(y_true, y_pred)
-        return 0.5 * (np.square(loss))
+        return y_pred - y_true
+ 
     
 # CALCULATE LATER!!!!
 class CrossEntropy(LossFunction):
     pass
+

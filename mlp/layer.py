@@ -52,7 +52,25 @@ class Layer:
         :param delta: delta term from layer above
         :return: (weight gradients, bias gradients)
         """
-        dL_dW = None
-        dL_db = None
-        self.delta = None
+        dL_dW = None 
+        dL_db = None 
+        self.delta = delta
+
+        
+        # Partial derivate of the Output Layer with respect to the current layer's input 
+        # = Partial derivate of the layer's activations with respect to the current layer's input
+        dO_dZ = self.activation_function.derivative(self.activations)       
+
+        # Partial derivate of the Current Layer's input with respect to the current layer's weights
+        # = Partial derivative of the previous layer's activations with respect to the current layer's weights 
+        # = Previous layers activations
+        dZ_dW = h
+
+        # Partial derivate of the Loss with respect to the current layer's weights
+        dL_dW = np.dot(dZ_dW.T, delta * dO_dZ)
+
+        # Partial derivate of the Loss with respect to the current layer's biases       
+        dL_db = np.sum(delta * dO_dZ, axis=0)
+        
         return dL_dW, dL_db
+    
