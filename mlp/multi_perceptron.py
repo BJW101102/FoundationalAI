@@ -1,9 +1,8 @@
+import matplotlib.pyplot as plt
 import numpy as np
 from typing import Tuple
 from .layer import Layer
 from .loss import LossFunction
-
-import numpy as np
 
 def batch_generator(train_x, train_y, batch_size):
     """
@@ -16,25 +15,24 @@ def batch_generator(train_x, train_y, batch_size):
     :return: A list of tuples [(batch_x, batch_y), (batch_x, batch_y), ...] for each mini-batch.
     """
 
-    n_samples = len(train_x)  # Get the total number of samples.
-
-    indices = np.arange(n_samples)  # Create an array of indices (0, 1, ..., n-1).
-    
-    
-    batches = []  # Create an empty list to hold the batches.
+    n_samples = len(train_x) 
+    indices = np.arange(n_samples)  
+    batches = []  
 
     # Loop through the indices in steps of batch_size.
     for start_idx in range(0, n_samples, batch_size):
         batch_indices = indices[start_idx:start_idx + batch_size]  # Get indices for the current batch.
         
         # Ensure batch_indices is of correct integer type
-        batch_x = train_x[batch_indices]  # Get the input data for the batch.
-        batch_y = train_y[batch_indices]  # Get the target data for the batch.
+        batch_x = train_x[batch_indices]  
+        batch_y = train_y[batch_indices]  
         
-        batches.append((batch_x, batch_y))  # Add the batch to the list of batches.
+        batches.append((batch_x, batch_y))  
 
     return batches  # Return the list of all batches.
 
+import matplotlib.pyplot as plt
+import os
 
 class MultilayerPerceptron:
     def __init__(self, layers: Tuple[Layer] | list[Layer]):
@@ -52,15 +50,12 @@ class MultilayerPerceptron:
         :return: network output
         """
         
-        for layer in self.layers:
+        for i, layer in enumerate(self.layers):
             x = layer.forward(h=x)
 
         return x
 
     def backward(self, loss_grad: np.ndarray, input_data: np.ndarray) -> Tuple[list, list]:
-
-        # gradient: vector of derivatives of losses 
-
         """
         Applies backpropagation to compute the gradients of the weights and biases for all layers in the network
         :param loss_grad: gradient of the loss function
@@ -70,32 +65,37 @@ class MultilayerPerceptron:
         dl_dw_all = []
         dl_db_all = []
 
-
         delta = loss_grad
-        for i, layer in enumerate(reversed(self.layers)):
+        for i, layer in enumerate(reversed(self.layers)): 
             
-            if i == 0:
+            input_layer_index = len(self.layers) - 1
+            current_layer_index = input_layer_index - i
+            prev_layer_index = current_layer_index - 1
+            
+            if i == input_layer_index:
                 prev_activation = input_data  # The input to the network is the first layer's "h".
             else:
-                prev_activation = self.layers[-(i+1)].activations # Activations from the previous layer.
+                prev_activation = self.layers[prev_layer_index].activations # Activations from the previous layer.
             
+            # Compute gradients for weights and biases
             dL_dW, dL_db = layer.backward(h=prev_activation, delta=delta)
             
-
-            # Partial derivate of the input with respect to the previous layer's output
+            # Partial derivatives of the layer's activations
             dZ_dPO = layer.W
-
-            # delta = np.dot(layer.delta,)
+            dO_dZ = layer.activation_function.derivative(layer.activations)       
+            
+            # Update delta for backpropagation
+            delta = np.dot(layer.delta * dO_dZ, dZ_dPO.T)
 
             dl_dw_all.append(dL_dW)
             dl_db_all.append(dL_db)
 
-    
+        dl_dw_all.reverse()
+        dl_db_all.reverse()
 
+        return dl_dw_all, dl_db_all
 
-        return None, None
-
-    def train(self, train_x: np.ndarray, train_y: np.ndarray, val_x: np.ndarray, val_y: np.ndarray, loss_func: LossFunction, learning_rate: float=1E-3, batch_size: int=16, epochs: int=32) -> Tuple[np.ndarray, np.ndarray]:
+    def train(self, train_x: np.ndarray, train_y: np.ndarray, val_x: np.ndarray, val_y: np.ndarray, loss_func: LossFunction, learning_rate: float=1E-3, batch_size: int=16, epochs: int=32, save_dir: str = "./") -> Tuple[np.ndarray, np.ndarray]:
         """
         Train the multilayer perceptron
 
@@ -107,35 +107,74 @@ class MultilayerPerceptron:
         :param learning_rate: learning rate for parameter updates
         :param batch_size: size of each batch
         :param epochs: number of epochs
+        :param save_dir: directory to save the plot image (default is current directory)
         :return:
         """
-
-        training_losses = None
-        validation_losses = None
+        
+        training_losses = []
+        validation_losses = []
 
         batches = batch_generator(train_x, train_y, batch_size)
+        total_batches = len(batches)
 
         for epoch in range(epochs):
-            for batch_x, batch_y in batches:
+            epoch_training_loss = 0
+            epoch_validation_loss = 0
+            for batch_num, (batch_x, batch_y) in enumerate(batches):
                 
+                # Step 0. Prepare data
                 network_input = np.array(batch_x) # arrays of input data
                 y_true = np.array(batch_y)
+                
                 # Step 1. Forward pass
                 network_output = self.forward(network_input) # arrays of output data
 
-                # Step 2. Compute the loss
-                loss = loss_func.loss(y_true=y_true, y_pred=network_output) 
-
-                # Step 3. Compute loss gradient
+                # Step 2. Compute loss gradient
                 loss_grad = loss_func.derivative(y_true=y_true, y_pred=network_output)
 
-                # Step 4. Backward pass
-                
+                # Step 3. Backpropagation
+                dl_dw_all, dl_db_all = self.backward(loss_grad=loss_grad, input_data=network_input)
 
+                # Step 4. Update weights and biases (per layer)
+                for i, layer in enumerate(self.layers):                       
+                    layer.W -= learning_rate * dl_dw_all[i]  # Update weights
+                    layer.b -= learning_rate * dl_db_all[i]  # Update biases
 
-            break
+                # Step 5. Run Forward
+                updated_network_output = self.forward(network_input)
 
+                # Step 6. Compute loss
+                loss = loss_func.loss(y_true=y_true, y_pred=updated_network_output)
+                batch_loss = np.sum(loss)
 
+                epoch_training_loss += batch_loss
 
+            validated_network_output = self.forward(val_x)
+            test_loss = loss_func.loss(val_y, validated_network_output)
+            epoch_validation_loss += test_loss
+            epoch_training_loss /= len(batches)
+
+            # Collecting loss values for plotting
+            training_losses.append(epoch_training_loss)
+            validation_losses.append(epoch_validation_loss)
+
+            print(f"Epoch {epoch+1}/{epochs} | Training Loss: {epoch_training_loss} | Validation Loss: {epoch_validation_loss}")
+
+        # Plotting the loss values
+        plt.plot(range(epochs), training_losses, label="Training Loss")
+        plt.plot(range(epochs), validation_losses, label="Validation Loss")
+        plt.xlabel("Epochs")
+        plt.ylabel("Loss")
+        plt.title("Training and Validation Loss over Epochs")
+        plt.legend()
+
+        # Save the plot to a file in the specified directory
+        os.makedirs(save_dir, exist_ok=True)  # Ensure the directory exists
+        plot_file = os.path.join(save_dir, "loss_plot.png")
+        plt.savefig(plot_file)
+        print(f"Plot saved to {plot_file}")
+
+        # Show the plot (optional)
+        plt.show()
 
         return training_losses, validation_losses

@@ -42,14 +42,22 @@ class MnistDataloader(object):
     
 
 def convert_data(x, y) -> tuple[np.ndarray, np.ndarray]:
+    
     x = np.array(x) 
     y = np.array(y)
+
     n_samples = len(x)  # Get the total number of samples.
     num_classes = len(np.unique(y))
 
-    
     x = x.reshape(n_samples, -1)  # Flatten each image to a 1D vector.
-    y = np.zeros(y.shape[0] * num_classes)
+
+    # Create a matrix of zeros with shape (n_samples, num_classes)
+    y_one_hot = np.zeros((n_samples, num_classes))
+
+    y_one_hot[np.arange(n_samples), y] = 1
+
+    y = y_one_hot
+
     return x, y
 
 def load_mnist_data():

@@ -7,7 +7,7 @@ from mlp.activation import *
 from mlp.multi_perceptron import MultilayerPerceptron, Layer
 
             
-def initialize_layers(input_size: int, output_size: int, activation_function: ActivationFunction,  min_layers:int=1, max_layers:int=1, debug:bool=False) -> list[Layer]:
+def initialize_layers(input_size: int, output_size: int, input_activation: ActivationFunction, hidden_activation: ActivationFunction, output_activation: ActivationFunction, num_hidden_layers: int=1, neurons_in_hidden_layer: int=32, debug: bool=False) -> list[Layer]:
         """
         Initialize layers for the neural network based on the given configuration.
         :param layer_config: List of tuples where each tuple is (fan_in, fan_out, activation_function)
@@ -17,33 +17,33 @@ def initialize_layers(input_size: int, output_size: int, activation_function: Ac
         layers = []
         
         # Generate a random number of hidden layers
-        num_hidden_layers = random.randint(min_layers, max_layers)
+        num_hidden_layers = num_hidden_layers
         
         # The middle of the input and output size
-        neurons_in_hidden_layer = 128
+        neurons_in_hidden_layer = neurons_in_hidden_layer
         
         # Creating Input Layer
-        input_layer = Layer(input_size, neurons_in_hidden_layer, activation_function)
+        input_layer = Layer(input_size, neurons_in_hidden_layer, input_activation)
         layers.append(input_layer)
                 
         # Creating Hidden Layers
+        hidden =""
         for _ in range(num_hidden_layers):
             fan_in = neurons_in_hidden_layer
-            neurons_in_hidden_layer = neurons_in_hidden_layer // 2
-            fan_out = neurons_in_hidden_layer 
-            layer = Layer(fan_in, fan_out,activation_function)
+            fan_out = max(neurons_in_hidden_layer // 2, 1)
+            layer = Layer(fan_in, fan_out, hidden_activation)
+            hidden +=f'- Hidden: # of Neurons={fan_in}\n'
+            neurons_in_hidden_layer = fan_out
             layers.append(layer)
             
         # Creating Output Layers
-        output_layer = Layer(neurons_in_hidden_layer, output_size, activation_function)
+        output_layer = Layer(neurons_in_hidden_layer, output_size, output_activation)
         layers.append(output_layer)
         
         if debug:
             total_layers = num_hidden_layers + 2
             print(f'Creating Network with {total_layers} Layers')
-            print(f'- Input: # of Neurons={input_size}')
-            print(f'- Output: # of Neurons={output_size}')
-            print(f'- Hidden: # of Neurons={neurons_in_hidden_layer}')
+            print(f'- Input: # of Neurons={input_size}\n' + hidden + f'- Output: # of Neurons={output_size}')
 
         return layers
 
@@ -64,20 +64,44 @@ def initialize_layers(input_size: int, output_size: int, activation_function: Ac
 
 if __name__ == '__main__':
     debug = True
-    (x_train, y_train), (x_test, y_test) = load_mnist_data()
+    (x_train_full, y_train_full), (x_test, y_test) = load_mnist_data()
+
+    split_idx = int(0.8 * len(x_train_full))
+    x_train = x_train_full[:split_idx]
+    y_train = y_train_full[:split_idx]
+    x_val = x_train_full[split_idx:]
+    y_val = y_train_full[split_idx:]
 
     # Gathering Metrics
-    input_size = x_train[0].reshape(-1).shape[0] 
-    output_size = num_classes = len(np.unique(y_train))
+    input_size = len(x_train[0])
+    output_size= len((y_train[0]))
 
     # Initializing Network Layers
-    activation_function = Relu()
-    loss_function = SquaredError()
-    layers = initialize_layers(input_size=input_size, output_size=output_size, activation_function=activation_function, debug=debug)
+    input_activation_function = Linear()
+    hidden_activation_function = Relu()
+    output_activation_function = Softmax()
+    loss_function = CrossEntropy()
+
+    layers = initialize_layers(
+         input_size=input_size, 
+         output_size=output_size, 
+         input_activation=input_activation_function, 
+         hidden_activation=hidden_activation_function,
+         output_activation=output_activation_function,
+         num_hidden_layers=1,
+         neurons_in_hidden_layer=16, 
+         debug=debug
+    )
 
     # Training Network
     multi_p = MultilayerPerceptron(layers=layers)
-    multi_p.train(x_train, y_train, x_train,  y_train, loss_function)
+    multi_p.train(
+         train_x=x_train, 
+         train_y=y_train, 
+         val_x=x_val,  
+         val_y=y_val, 
+         loss_func=loss_function,
+        )
     
 
 

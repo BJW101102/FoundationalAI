@@ -69,4 +69,24 @@ class Mish(ActivationFunction):
 
 # CALCULATE LATER!!!!
 class Softmax(ActivationFunction):
-    pass
+    def forward(self, x):
+        exps = np.exp(x - np.max(x, axis=1, keepdims=True))
+        return exps / np.sum(exps, axis=1, keepdims=True)
+    
+    def derivative(self, x):
+        # Get the softmax output for the batch
+        y = self.forward(x)  # shape (batch_size, n_classes)
+        
+        dy_dx = np.zeros_like(y)
+
+        for i in range(y.shape[0]):  # Loop over the batch
+            softmax_output = y[i]
+            diag_y = np.diag(softmax_output)
+            yyT = np.outer(softmax_output, softmax_output)
+            jacobian = diag_y - yyT
+            
+            dy_dx[i] = np.diagonal(jacobian)  
+
+        return dy_dx  
+
+
