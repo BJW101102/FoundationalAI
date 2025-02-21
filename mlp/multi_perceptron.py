@@ -1,5 +1,6 @@
-import matplotlib.pyplot as plt
+import os
 import numpy as np
+import matplotlib.pyplot as plt
 from typing import Tuple
 from .layer import Layer
 from .loss import LossFunction
@@ -31,8 +32,6 @@ def batch_generator(train_x, train_y, batch_size):
 
     return batches  # Return the list of all batches.
 
-import matplotlib.pyplot as plt
-import os
 
 class MultilayerPerceptron:
     def __init__(self, layers: Tuple[Layer] | list[Layer]):
@@ -50,9 +49,10 @@ class MultilayerPerceptron:
         :return: network output
         """
         
-        for i, layer in enumerate(self.layers):
-            x = layer.forward(h=x)
 
+        for layer in self.layers:
+            x = layer.forward(h=x)
+            
         return x
 
     def backward(self, loss_grad: np.ndarray, input_data: np.ndarray) -> Tuple[list, list]:
@@ -65,27 +65,30 @@ class MultilayerPerceptron:
         dl_dw_all = []
         dl_db_all = []
 
-        delta = loss_grad
-        for i, layer in enumerate(reversed(self.layers)): 
+        for k, layer in enumerate(reversed(self.layers)): 
             
+            # Mapping indices 
             input_layer_index = len(self.layers) - 1
-            current_layer_index = input_layer_index - i
+            output_layer_index = 0
+            current_layer_index = input_layer_index - k
             prev_layer_index = current_layer_index - 1
-            
-            if i == input_layer_index:
-                prev_activation = input_data  # The input to the network is the first layer's "h".
+            next_layer_index = current_layer_index + 1 if current_layer_index + 1 <= input_layer_index else -1
+
+            # Grabbing the previous activations
+            if k == input_layer_index:
+                prev_activation = input_data   
             else:
-                prev_activation = self.layers[prev_layer_index].activations # Activations from the previous layer.
-            
+                prev_layer = self.layers[prev_layer_index]
+                prev_activation = prev_layer.activations
+
+            # Grabbing the next layer's delta 
+            if k == output_layer_index:
+                delta = loss_grad
+            else:
+                delta = self.layers[next_layer_index].delta
+                
             # Compute gradients for weights and biases
-            dL_dW, dL_db = layer.backward(h=prev_activation, delta=delta)
-            
-            # Partial derivatives of the layer's activations
-            dZ_dPO = layer.W
-            dO_dZ = layer.activation_function.derivative(layer.activations)       
-            
-            # Update delta for backpropagation
-            delta = np.dot(layer.delta * dO_dZ, dZ_dPO.T)
+            dL_dW, dL_db = layer.backward(h=prev_activation, delta=delta)        
 
             dl_dw_all.append(dL_dW)
             dl_db_all.append(dL_db)
@@ -117,44 +120,47 @@ class MultilayerPerceptron:
         batches = batch_generator(train_x, train_y, batch_size)
         total_batches = len(batches)
 
+
         for epoch in range(epochs):
             epoch_training_loss = 0
             epoch_validation_loss = 0
+
             for batch_num, (batch_x, batch_y) in enumerate(batches):
-                
-                # Step 0. Prepare data
-                network_input = np.array(batch_x) # arrays of input data
+                network_input = np.array(batch_x)
                 y_true = np.array(batch_y)
+
                 
-                # Step 1. Forward pass
-                network_output = self.forward(network_input) # arrays of output data
-
-                # Step 2. Compute loss gradient
+                # Step 1: Forward Pass
+                network_output = self.forward(network_input)
+                # print(f'Network output shape: {network_output.shape}')
+                
+                # Step 2: Compute Loss Gradient
                 loss_grad = loss_func.derivative(y_true=y_true, y_pred=network_output)
-
-                # Step 3. Backpropagation
+                               
+                # Step 3: Back Propagate
                 dl_dw_all, dl_db_all = self.backward(loss_grad=loss_grad, input_data=network_input)
-
-                # Step 4. Update weights and biases (per layer)
-                for i, layer in enumerate(self.layers):                       
-                    layer.W -= learning_rate * dl_dw_all[i]  # Update weights
-                    layer.b -= learning_rate * dl_db_all[i]  # Update biases
-
-                # Step 5. Run Forward
+                
+                # Step 4: Update Weights and Biases
+                for i, layer in enumerate(self.layers):
+                    layer.W -= learning_rate * dl_dw_all[i] 
+                    layer.b -= learning_rate * dl_db_all[i] 
+                
+                # Step 5: Run Forward w/ Updated Weights
                 updated_network_output = self.forward(network_input)
 
-                # Step 6. Compute loss
-                loss = loss_func.loss(y_true=y_true, y_pred=updated_network_output)
-                batch_loss = np.sum(loss)
+                # Step 6: Compute Loss
+                loss = loss_func.loss(y_true=y_true, y_pred=updated_network_output)               
+                epoch_training_loss += np.sum(loss)
 
-                epoch_training_loss += batch_loss
-
+            # Run Validation
             validated_network_output = self.forward(val_x)
+            
+            # Compute Loss
             test_loss = loss_func.loss(val_y, validated_network_output)
             epoch_validation_loss += test_loss
             epoch_training_loss /= len(batches)
 
-            # Collecting loss values for plotting
+            # Track Loss
             training_losses.append(epoch_training_loss)
             validation_losses.append(epoch_validation_loss)
 

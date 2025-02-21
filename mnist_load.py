@@ -43,22 +43,25 @@ class MnistDataloader(object):
 
 def convert_data(x, y) -> tuple[np.ndarray, np.ndarray]:
     
-    x = np.array(x) 
+    x = np.array(x)
     y = np.array(y)
 
     n_samples = len(x)  # Get the total number of samples.
-    num_classes = len(np.unique(y))
 
-    x = x.reshape(n_samples, -1)  # Flatten each image to a 1D vector.
+    x = np.array([np.array(e).flatten() for e in x]) # Array of flatten arrays
+
+
+    x = x / 255.0    
+
+    print(f"min x: {np.min(x)}")
+    print(f"max x: {np.max(x)}")
 
     # Create a matrix of zeros with shape (n_samples, num_classes)
-    y_one_hot = np.zeros((n_samples, num_classes))
+    y_one_hot = np.zeros((n_samples, np.max(y)+1))
 
     y_one_hot[np.arange(n_samples), y] = 1
 
-    y = y_one_hot
-
-    return x, y
+    return x, y_one_hot
 
 def load_mnist_data():
     input_path = './datasets'

@@ -15,35 +15,44 @@ def initialize_layers(input_size: int, output_size: int, input_activation: Activ
         """
         
         layers = []
-        
-        # Generate a random number of hidden layers
-        num_hidden_layers = num_hidden_layers
-        
-        # The middle of the input and output size
-        neurons_in_hidden_layer = neurons_in_hidden_layer
-        
+
+
+
         # Creating Input Layer
-        input_layer = Layer(input_size, neurons_in_hidden_layer, input_activation)
+        input_layer = Layer(fan_in=input_size, fan_out=neurons_in_hidden_layer, activation_function=input_activation, num=0)
         layers.append(input_layer)
-                
+
         # Creating Hidden Layers
-        hidden =""
-        for _ in range(num_hidden_layers):
-            fan_in = neurons_in_hidden_layer
-            fan_out = max(neurons_in_hidden_layer // 2, 1)
-            layer = Layer(fan_in, fan_out, hidden_activation)
-            hidden +=f'- Hidden: # of Neurons={fan_in}\n'
-            neurons_in_hidden_layer = fan_out
+        current_fan_in = neurons_in_hidden_layer  # 784
+        current_fan_out = neurons_in_hidden_layer  # e.g., 64
+
+        # Create hidden layers
+        for i in range(num_hidden_layers):
+            # Create a hidden layer with current fan-in and fan-out
+            layer = Layer(current_fan_in, current_fan_out, hidden_activation, i + 1)
             layers.append(layer)
             
-        # Creating Output Layers
-        output_layer = Layer(neurons_in_hidden_layer, output_size, output_activation)
+            # Update for the next hidden layer:
+            current_fan_in = current_fan_out
+            current_fan_out = current_fan_out // 2  # or some other rule
+
+        # Create the output layer
+        output_layer = Layer(current_fan_in, output_size, output_activation, num_hidden_layers + 1)
         layers.append(output_layer)
-        
+
+
+
+        # Debugging Output
         if debug:
-            total_layers = num_hidden_layers + 2
-            print(f'Creating Network with {total_layers} Layers')
-            print(f'- Input: # of Neurons={input_size}\n' + hidden + f'- Output: # of Neurons={output_size}')
+            print(f'Creating Network with {len(layers)} Layers')
+            
+            for i, layer in enumerate(layers):
+                print(f'Layer {i+1}:')
+                print(f'  - Fan-in: {layer.fan_in}')
+                print(f'  - Fan-out: {layer.fan_out}')
+                print(f'  - Neurons: {layer.fan_out}')  # Neurons in the layer are equal to fan-out
+
+
 
         return layers
 
@@ -61,6 +70,7 @@ def initialize_layers(input_size: int, output_size: int, input_activation: Activ
 # Overfitting: a model that is too complex and fits the training data too well
 # Underfitting: a model that is too simple and does not fit the training data well
 # Hyperparameter: a parameter whose value is set before the learning process begins
+# Standardize: transforming data to have mean=0 and standard deviation=1 to ensure all features contribute equally
 
 if __name__ == '__main__':
     debug = True
@@ -72,6 +82,7 @@ if __name__ == '__main__':
     x_val = x_train_full[split_idx:]
     y_val = y_train_full[split_idx:]
 
+
     # Gathering Metrics
     input_size = len(x_train[0])
     output_size= len((y_train[0]))
@@ -82,26 +93,40 @@ if __name__ == '__main__':
     output_activation_function = Softmax()
     loss_function = CrossEntropy()
 
-    layers = initialize_layers(
-         input_size=input_size, 
-         output_size=output_size, 
-         input_activation=input_activation_function, 
-         hidden_activation=hidden_activation_function,
-         output_activation=output_activation_function,
-         num_hidden_layers=1,
-         neurons_in_hidden_layer=16, 
-         debug=debug
-    )
+    # layers = initialize_layers(
+    #      input_size=input_size, 
+    #      output_size=output_size, 
+    #      input_activation=input_activation_function, 
+    #      hidden_activation=hidden_activation_function,
+    #      output_activation=output_activation_function,
+    #      num_hidden_layers=1,
+    #      neurons_in_hidden_layer=128, 
+    #      debug=debug
+    # )
+
+
 
     # Training Network
+
+    layers = [
+    Layer(fan_in=input_size, fan_out=128, activation_function=Linear(), num=0),  # Input layer → Hidden Layer 1
+    Layer(fan_in=128, fan_out=64, activation_function=Relu(), num=1),  # Hidden Layer 1 → Hidden Layer 2
+    Layer(fan_in=64, fan_out=output_size, activation_function=Softmax(), num=2),  # Hidden Layer 1 → Hidden Layer 2
+
+    ]
+
+
+    print(type(layers))
     multi_p = MultilayerPerceptron(layers=layers)
     multi_p.train(
          train_x=x_train, 
          train_y=y_train, 
          val_x=x_val,  
          val_y=y_val, 
-         loss_func=loss_function,
-        )
+         learning_rate=0.0001,
+         batch_size=16,
+         loss_func=loss_function
+    )
     
 
 

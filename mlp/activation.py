@@ -82,7 +82,7 @@ class Softmax(ActivationFunction):
         for i in range(y.shape[0]):  # Loop over the batch
             softmax_output = y[i]
             diag_y = np.diag(softmax_output)
-            yyT = np.outer(softmax_output, softmax_output)
+            yyT = np.outer(softmax_output, softmax_output.T)
             jacobian = diag_y - yyT
             
             dy_dx[i] = np.diagonal(jacobian)  
