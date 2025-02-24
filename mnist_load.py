@@ -53,8 +53,8 @@ def convert_data(x, y) -> tuple[np.ndarray, np.ndarray]:
 
     x = x / 255.0    
 
-    print(f"min x: {np.min(x)}")
-    print(f"max x: {np.max(x)}")
+    # print(f"min x: {np.min(x)}")
+    # print(f"max x: {np.max(x)}")
 
     # Create a matrix of zeros with shape (n_samples, num_classes)
     y_one_hot = np.zeros((n_samples, np.max(y)+1))

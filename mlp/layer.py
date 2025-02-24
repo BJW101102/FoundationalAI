@@ -1,5 +1,5 @@
-from .activation import ActivationFunction
 import numpy as np
+from .activation import ActivationFunction
 from typing import Tuple
 
 class Layer:
@@ -11,6 +11,7 @@ class Layer:
         :param fan_in: number of neurons in previous (presynpatic) layer
         :param fan_out: number of neurons in this layer
         :param activation_function: instance of an ActivationFunction
+        :param num: the layer's number/index
         """
         self.fan_in = fan_in
         self.fan_out = fan_out
@@ -34,9 +35,7 @@ class Layer:
 
         z = np.dot(h, self.W) + self.b
         self.Z = z
-
         self.activations = self.activation_function.forward(z)
-
         return self.activations
 
 
@@ -50,18 +49,12 @@ class Layer:
         :return: (weight gradients, bias gradients)
         """
 
-                
         dO_dZ = self.activation_function.derivative(self.Z)
-
         dZ_dW = h
         dZ_DOP = self.W
-
-        # Compute weight and bias gradients
         dL_dW = np.dot(dZ_dW.T, delta * dO_dZ)
         dL_db = np.sum(delta * dO_dZ, axis=0)
-
-        # Updating Delta
-        self.delta = delta = np.dot(delta * dO_dZ, dZ_DOP.T)
+        self.delta = np.dot(delta * dO_dZ, dZ_DOP.T)
 
         return dL_dW, dL_db
 

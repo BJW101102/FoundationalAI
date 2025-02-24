@@ -4,6 +4,46 @@ import matplotlib.pyplot as plt
 from typing import Tuple
 from .layer import Layer
 from .loss import LossFunction
+from .activation import ActivationFunction
+
+def initialize_layers(input_size: int, output_size: int, input_activation: ActivationFunction, hidden_activation: ActivationFunction, output_activation: ActivationFunction, num_hidden_layers: int=1, neurons_in_hidden_layer: int=32, debug: bool=False) -> list[Layer]:
+        """
+        Initialize layers for the neural network based on the given configuration.
+        :param layer_config: List of tuples where each tuple is (fan_in, fan_out, activation_function)
+        :return: List of Layer instances
+        """
+        
+        layers = []
+
+        # Creating Input Layer
+        input_layer = Layer(fan_in=input_size, fan_out=neurons_in_hidden_layer, activation_function=input_activation, num=0)
+        layers.append(input_layer)
+
+        # Creating Hidden Layers
+        current_fan_in = neurons_in_hidden_layer 
+        current_fan_out = neurons_in_hidden_layer  
+        for i in range(num_hidden_layers):
+            layer = Layer(current_fan_in, current_fan_out, hidden_activation, i + 1)
+            layers.append(layer)
+            
+            # Update for the next hidden layer:
+            current_fan_in = current_fan_out
+            current_fan_out = current_fan_out // 2 
+
+        # Create the output layer
+        output_layer = Layer(current_fan_in, output_size, output_activation, num_hidden_layers + 1)
+        layers.append(output_layer)
+
+        if debug:
+            print(f'Creating Network with {len(layers)} Layers')
+            for i, layer in enumerate(layers):
+                print(f'Layer {i}:')
+                print(f'  - Fan-in: {layer.fan_in}')
+                print(f'  - Fan-out: {layer.fan_out}')
+                print(f'  - Neurons: {layer.fan_out}') 
+
+        return layers
+
 
 def batch_generator(train_x, train_y, batch_size):
     """
@@ -22,7 +62,7 @@ def batch_generator(train_x, train_y, batch_size):
 
     # Loop through the indices in steps of batch_size.
     for start_idx in range(0, n_samples, batch_size):
-        batch_indices = indices[start_idx:start_idx + batch_size]  # Get indices for the current batch.
+        batch_indices = indices[start_idx:start_idx + batch_size]  
         
         # Ensure batch_indices is of correct integer type
         batch_x = train_x[batch_indices]  
@@ -30,7 +70,7 @@ def batch_generator(train_x, train_y, batch_size):
         
         batches.append((batch_x, batch_y))  
 
-    return batches  # Return the list of all batches.
+    return batches  
 
 
 class MultilayerPerceptron:
@@ -98,7 +138,7 @@ class MultilayerPerceptron:
 
         return dl_dw_all, dl_db_all
 
-    def train(self, train_x: np.ndarray, train_y: np.ndarray, val_x: np.ndarray, val_y: np.ndarray, loss_func: LossFunction, learning_rate: float=1E-3, batch_size: int=16, epochs: int=32, save_dir: str = "./") -> Tuple[np.ndarray, np.ndarray]:
+    def train(self, train_x: np.ndarray, train_y: np.ndarray, val_x: np.ndarray, val_y: np.ndarray, loss_func: LossFunction, learning_rate: float=1E-3, batch_size: int=16, epochs: int=32, save_dir: str = "./", save_name:str='loss_plot.png') -> Tuple[np.ndarray, np.ndarray]:
         """
         Train the multilayer perceptron
 
@@ -119,24 +159,19 @@ class MultilayerPerceptron:
 
         batches = batch_generator(train_x, train_y, batch_size)
         total_batches = len(batches)
-
-
         for epoch in range(epochs):
-            epoch_training_loss = 0
-            epoch_validation_loss = 0
+            training_loss = 0
 
             for batch_num, (batch_x, batch_y) in enumerate(batches):
                 network_input = np.array(batch_x)
                 y_true = np.array(batch_y)
 
-                
                 # Step 1: Forward Pass
                 network_output = self.forward(network_input)
-                # print(f'Network output shape: {network_output.shape}')
                 
                 # Step 2: Compute Loss Gradient
                 loss_grad = loss_func.derivative(y_true=y_true, y_pred=network_output)
-                               
+                            
                 # Step 3: Back Propagate
                 dl_dw_all, dl_db_all = self.backward(loss_grad=loss_grad, input_data=network_input)
                 
@@ -148,23 +183,25 @@ class MultilayerPerceptron:
                 # Step 5: Run Forward w/ Updated Weights
                 updated_network_output = self.forward(network_input)
 
-                # Step 6: Compute Loss
-                loss = loss_func.loss(y_true=y_true, y_pred=updated_network_output)               
-                epoch_training_loss += np.sum(loss)
+                # Step 6: Compute Loss for the batch (aggregate per batch)
+                loss = loss_func.loss(y_true=y_true, y_pred=updated_network_output)
+                training_loss += np.mean(loss)  # average over the batch
 
-            # Run Validation
+            # Run Validation on the entire validation set
             validated_network_output = self.forward(val_x)
             
-            # Compute Loss
+            # Compute Validation Loss and aggregate (mean)
             test_loss = loss_func.loss(val_y, validated_network_output)
-            epoch_validation_loss += test_loss
-            epoch_training_loss /= len(batches)
+            validation_loss = np.mean(test_loss)
+
+            training_loss /= total_batches
 
             # Track Loss
-            training_losses.append(epoch_training_loss)
-            validation_losses.append(epoch_validation_loss)
+            training_losses.append(training_loss)
+            validation_losses.append(validation_loss)
 
-            print(f"Epoch {epoch+1}/{epochs} | Training Loss: {epoch_training_loss} | Validation Loss: {epoch_validation_loss}")
+            print(f"Epoch {epoch+1}/{epochs} | Training Loss: {training_loss} | Validation Loss: {validation_loss}")
+
 
         # Plotting the loss values
         plt.plot(range(epochs), training_losses, label="Training Loss")
@@ -176,7 +213,7 @@ class MultilayerPerceptron:
 
         # Save the plot to a file in the specified directory
         os.makedirs(save_dir, exist_ok=True)  # Ensure the directory exists
-        plot_file = os.path.join(save_dir, "loss_plot.png")
+        plot_file = os.path.join(save_dir, save_name)
         plt.savefig(plot_file)
         print(f"Plot saved to {plot_file}")
 
