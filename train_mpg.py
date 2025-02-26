@@ -19,13 +19,8 @@ def select_random_samples(x_test, y_test, num_samples=10):
 def display_mpg_predictions(x_test, y_test, network_output):
     """Displays predicted MPG against true MPG in a table."""
     selected_samples, selected_true_labels = select_random_samples(x_test, y_test)
-    
-    # Get indices of the selected samples (since x_test and network_output should have matching shapes)
     selected_indices = np.array([np.where(np.all(x_test == sample, axis=1))[0][0] for sample in selected_samples])
-    
-    # Use selected_indices to get the corresponding predictions
     predictions = network_output[selected_indices]
-    
     results_df = pd.DataFrame({
         'True MPG': selected_true_labels.flatten(),
         'Predicted MPG': predictions.flatten()
@@ -34,8 +29,6 @@ def display_mpg_predictions(x_test, y_test, network_output):
     print("\nPredicted MPG vs True MPG:")
     print(results_df)
 
-
-    
 if __name__ == '__main__':
      print('loading data...')
      (x_train, y_train), (x_val, y_val), (x_test, y_test) = load_mpg_dataset()

@@ -26,20 +26,15 @@ def select_samples_per_class(y_test, num_classes):
 def display_mnist_pred(x_test, y_test, network_output, num_classes):
     """Displays the mnist images with predicted and true values"""
     selected_indices, selected_labels = select_samples_per_class(y_test, num_classes)
-    
-    # Get predictions from network output
     predictions = np.argmax(network_output[selected_indices], axis=1)
-
-    # Plot the selected images
-    _, axes = plt.subplots(2, 5, figsize=(15, 6))  # 2 rows, 5 columns
+    _, axes = plt.subplots(2, 5, figsize=(15, 6))  
     axes = axes.flatten()  
 
     for i in range(len(selected_indices)):
         sample_image = x_test[selected_indices[i]].reshape(28, 28)
         axes[i].imshow(sample_image, cmap='gray')
         axes[i].set_title(f'Pred: {predictions[i]}\nTrue: {selected_labels[i]}')
-        axes[i].axis('off')  # Hide the axes for better clarity
-
+        axes[i].axis('off') 
     plt.tight_layout() 
     plt.show()
 
