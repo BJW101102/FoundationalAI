@@ -67,6 +67,8 @@ if __name__ == '__main__':
      epochs = 100
      save_dir = './images'
      save_name='mpg_bwalton.png'
+     dataset = 'MPG'
+
 
      multi_p = MultilayerPerceptron(layers=layers)
      print(f'{'='*PADDING}TRAINING{'='*PADDING}')
@@ -89,7 +91,7 @@ if __name__ == '__main__':
      print(f'Testing Loss: {np.mean(testing_loss)}')
      
      print(f'{'='*PADDING}PLOTTING{'='*PADDING}')
-     plot_training_graph(epochs, training_loss, validation_loss, save_dir, save_name)
+     plot_training_graph(epochs, training_loss, validation_loss, dataset, save_dir, save_name)
      
      print(f'{"="*PADDING}PREDICTIONS{"="*PADDING}')
      display_mpg_predictions(x_test, y_test, network_output)

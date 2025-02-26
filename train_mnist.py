@@ -82,6 +82,7 @@ if __name__ == '__main__':
      epochs = 40
      save_dir = './images'
      save_name='mnist_bwalton.png'
+     dataset = 'MNIST'
 
      # Training MLP
      multi_p = MultilayerPerceptron(layers=layers)
@@ -103,7 +104,7 @@ if __name__ == '__main__':
      print(f"Accuracy: {acc * 100:.2f}%")
      
      print(f'{'='*PADDING}PLOTTING{'='*PADDING}')
-     plot_training_graph(epochs, training_loss, validation_loss, save_dir, save_name)
+     plot_training_graph(epochs, training_loss, validation_loss, dataset, save_dir, save_name)
      
      print(f'{'='*PADDING}EXAMPLES{'='*PADDING}')
      display_mnist_pred(x_test, y_test, network_output, output_size)

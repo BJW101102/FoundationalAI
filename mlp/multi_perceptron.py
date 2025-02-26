@@ -6,13 +6,14 @@ from .layer import Layer
 from .loss import LossFunction
 from .activation import ActivationFunction
 
-def plot_training_graph(epochs: int, training_loss: list, validation_loss:list, save_dir: str, save_name: str):
+def plot_training_graph(epochs: int, training_loss: list, validation_loss:list, dataset: str, save_dir: str, save_name: str):
     """
     Plots the training graph for the MLP.
     
     :param epochs: The number of epochs,
     :param training_loss: The list of training loss
     :param validation_loss: The list of validation loss
+    :param data_set: The dataset that's being used
     :param save_dir: The directory to save the results
     :param save_name: The name of the file to save.
     """
@@ -20,7 +21,7 @@ def plot_training_graph(epochs: int, training_loss: list, validation_loss:list, 
     plt.plot(range(epochs), validation_loss, label="Validation Loss")
     plt.xlabel("Epochs")
     plt.ylabel("Loss")
-    plt.title("Training and Validation Loss over Epochs")
+    plt.title(f"Training and Validation Loss over Epochs ({dataset})")
     plt.legend()
     os.makedirs(save_dir, exist_ok=True)  
     plot_file = os.path.join(save_dir, save_name)
@@ -69,7 +70,6 @@ def initialize_layers(input_size: int, output_size: int, input_activation: Activ
                 print(f'Layer {i}:')
                 print(f'  - Fan-in: {layer.fan_in}')
                 print(f'  - Fan-out: {layer.fan_out}')
-                print(f'  - Neurons: {layer.fan_out}') 
 
         return layers
 
