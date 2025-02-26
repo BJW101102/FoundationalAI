@@ -6,7 +6,16 @@ from .layer import Layer
 from .loss import LossFunction
 from .activation import ActivationFunction
 
-def plot_training_graph(epochs: int, training_loss: str, validation_loss:str, save_dir: str, save_name: str):
+def plot_training_graph(epochs: int, training_loss: list, validation_loss:list, save_dir: str, save_name: str):
+    """
+    Plots the training graph for the MLP.
+    
+    :param epochs: The number of epochs,
+    :param training_loss: The list of training loss
+    :param validation_loss: The list of validation loss
+    :param save_dir: The directory to save the results
+    :param save_name: The name of the file to save.
+    """
     plt.plot(range(epochs), training_loss, label="Training Loss")
     plt.plot(range(epochs), validation_loss, label="Validation Loss")
     plt.xlabel("Epochs")
@@ -21,8 +30,15 @@ def plot_training_graph(epochs: int, training_loss: str, validation_loss:str, sa
 
 def initialize_layers(input_size: int, output_size: int, input_activation: ActivationFunction, hidden_activation: ActivationFunction, output_activation: ActivationFunction, num_hidden_layers: int=1, neurons_in_hidden_layer: int=32, debug: bool=False) -> list[Layer]:
         """
-        Initialize layers for the neural network based on the given configuration.
-        :param layer_config: List of tuples where each tuple is (fan_in, fan_out, activation_function)
+        Initialize layers for the neural network based on the given configuration, and for every hidden layer after the first the fan in neurons are halved.
+        
+        :param input_size: The size of the input layer
+        :param output_size: The size of the output layer
+        :param input_activation: The activation for the input layer
+        :param hidden_activation: The activation for the hidden layers
+        :param output_activation: The activation for the output layer
+        :param num_hidden_layers: Number of hidden layers, default=1
+        :param neurons_in_hidden_layer: Number of neurons in first hidden layers, default=32
         :return: List of Layer instances
         """
         
@@ -73,16 +89,12 @@ def batch_generator(train_x, train_y, batch_size):
     indices = np.arange(n_samples)  
     batches = []  
 
-    # Loop through the indices in steps of batch_size.
     for start_idx in range(0, n_samples, batch_size):
         batch_indices = indices[start_idx:start_idx + batch_size]  
-        
-        # Ensure batch_indices is of correct integer type
         batch_x = train_x[batch_indices]  
         batch_y = train_y[batch_indices]  
-        
         batches.append((batch_x, batch_y))  
-
+        
     return batches  
 
 

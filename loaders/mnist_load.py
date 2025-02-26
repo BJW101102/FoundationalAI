@@ -48,9 +48,7 @@ def convert_data(x, y) -> tuple[np.ndarray, np.ndarray]:
 
     n_samples = len(x)  # Get the total number of samples.
 
-    x = np.array([np.array(e).flatten() for e in x]) # Array of flatten arrays
-
-
+    x = np.array([np.array(e).flatten() for e in x]) 
     x = x / 255.0    
 
     # print(f"min x: {np.min(x)}")

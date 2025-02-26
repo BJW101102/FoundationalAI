@@ -1,8 +1,10 @@
-import os
-import matplotlib.pyplot as plt
+# Brandon Walton
+# Dr. James Ghawaly
+# CSC 4700 
+
 from mlp.loss import *
 from mlp.activation import *
-from mpg_load import load_mpg_dataset
+from loaders.mpg_load import load_mpg_dataset
 from mlp.multi_perceptron import MultilayerPerceptron, initialize_layers, plot_training_graph
 
 PADDING = 30
@@ -37,9 +39,8 @@ if __name__ == '__main__':
      
      epochs = 200
      save_dir = './images'
-     save_name='mpg_loss.png'
+     save_name='mpg_bwalton.png'
 
-     
      multi_p = MultilayerPerceptron(layers=layers)
      print(f'{'='*PADDING}TRAINING{'='*PADDING}')
      training_loss, validation_loss = multi_p.train(

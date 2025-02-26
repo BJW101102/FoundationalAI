@@ -18,7 +18,6 @@ class SquaredError(LossFunction):
         return y_pred - y_true
      
 class CrossEntropy(LossFunction):
-
     def loss(self, y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
         epsilon = 1e-9  
         y_pred = np.clip(y_pred, epsilon, 1 - epsilon)

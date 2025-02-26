@@ -18,7 +18,7 @@ class Layer:
         self.activation_function = activation_function    
         self.num = num    
         self.activations = None
-        self.Z = None
+        self.Z = None # Stores the pre activations for the layer
         self.delta = None
 
         limit = np.sqrt(6 / (self.fan_in + self.fan_out)) # Glorot Initialization
@@ -37,8 +37,6 @@ class Layer:
         self.Z = z
         self.activations = self.activation_function.forward(z)
         return self.activations
-
-
 
     def backward(self, h: np.ndarray, delta: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """

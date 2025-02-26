@@ -72,7 +72,6 @@ class Mish(ActivationFunction):
         sech_term = 1 / (np.cosh(np.log(1 + np.exp(x))))**2
         return tanh_term + x * sech_term * (1 / (1 + np.exp(-x)))
 
-
 class Softmax(ActivationFunction):
     def forward(self, x):
         exps = np.exp(x - np.max(x, axis=1, keepdims=True))
