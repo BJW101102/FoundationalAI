@@ -30,8 +30,8 @@ class MnistDataloader(object):
         images = []
         for i in range(size):
             img = np.array(image_data[i * rows * cols:(i + 1) * rows * cols])
-            img = img.reshape(28, 28)  # Reshape image to 28x28
-            images.append(img)  # Append numpy array instead of list
+            img = img.reshape(28, 28)  
+            images.append(img)  
 
         return images, labels
              
@@ -46,7 +46,7 @@ def convert_data(x, y) -> tuple[np.ndarray, np.ndarray]:
     x = np.array(x)
     y = np.array(y)
 
-    n_samples = len(x)  # Get the total number of samples.
+    n_samples = len(x) 
 
     x = np.array([np.array(e).flatten() for e in x]) 
     x = x / 255.0    
@@ -54,9 +54,7 @@ def convert_data(x, y) -> tuple[np.ndarray, np.ndarray]:
     # print(f"min x: {np.min(x)}")
     # print(f"max x: {np.max(x)}")
 
-    # Create a matrix of zeros with shape (n_samples, num_classes)
     y_one_hot = np.zeros((n_samples, np.max(y)+1))
-
     y_one_hot[np.arange(n_samples), y] = 1
 
     return x, y_one_hot
