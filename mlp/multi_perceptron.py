@@ -6,6 +6,19 @@ from .layer import Layer
 from .loss import LossFunction
 from .activation import ActivationFunction
 
+def plot_training_graph(epochs: int, training_loss: str, validation_loss:str, save_dir: str, save_name: str):
+    plt.plot(range(epochs), training_loss, label="Training Loss")
+    plt.plot(range(epochs), validation_loss, label="Validation Loss")
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.title("Training and Validation Loss over Epochs")
+    plt.legend()
+    os.makedirs(save_dir, exist_ok=True)  
+    plot_file = os.path.join(save_dir, save_name)
+    plt.savefig(plot_file)
+    print(f"Plot saved to {plot_file}")
+    plt.show()
+
 def initialize_layers(input_size: int, output_size: int, input_activation: ActivationFunction, hidden_activation: ActivationFunction, output_activation: ActivationFunction, num_hidden_layers: int=1, neurons_in_hidden_layer: int=32, debug: bool=False) -> list[Layer]:
         """
         Initialize layers for the neural network based on the given configuration.
@@ -81,15 +94,12 @@ class MultilayerPerceptron:
         """
         self.layers = layers
         
-    # Finished
     def forward(self, x: np.ndarray) -> np.ndarray:
         """
         This takes the network input and computes the network output (forward propagation)
         :param network_input: network input
         :return: network output
         """
-        
-
         for layer in self.layers:
             x = layer.forward(h=x)
             
@@ -201,23 +211,5 @@ class MultilayerPerceptron:
             validation_losses.append(validation_loss)
 
             print(f"Epoch {epoch+1}/{epochs} | Training Loss: {training_loss} | Validation Loss: {validation_loss}")
-
-
-        # Plotting the loss values
-        plt.plot(range(epochs), training_losses, label="Training Loss")
-        plt.plot(range(epochs), validation_losses, label="Validation Loss")
-        plt.xlabel("Epochs")
-        plt.ylabel("Loss")
-        plt.title("Training and Validation Loss over Epochs")
-        plt.legend()
-
-        # Save the plot to a file in the specified directory
-        os.makedirs(save_dir, exist_ok=True)  # Ensure the directory exists
-        plot_file = os.path.join(save_dir, save_name)
-        plt.savefig(plot_file)
-        print(f"Plot saved to {plot_file}")
-
-        # Show the plot (optional)
-        plt.show()
 
         return training_losses, validation_losses

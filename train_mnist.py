@@ -42,7 +42,7 @@ if __name__ == '__main__':
           learning_rate=1E-3,
           batch_size=16,
           loss_func=loss_function,
-          save_dir='./',
+          save_dir='./images',
           save_name='mnist_loss.png'
      )
 
