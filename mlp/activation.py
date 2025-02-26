@@ -65,11 +65,13 @@ class Softplus(ActivationFunction):
 
 class Mish(ActivationFunction):
     def forward(self, x):
-        return x * np.tanh(np.log(1 + np.exp(x)))
+        softplus = Softplus().forward(x)  # Use the Softplus instance to compute the forward pass
+        return x * np.tanh(softplus)
 
     def derivative(self, x):
-        tanh_term = self.forward(x) 
-        sech_term = 1 / (np.cosh(np.log(1 + np.exp(x))))**2
+        softplus = Softplus().forward(x)  # Use the Softplus instance to compute the forward pass
+        tanh_term = np.tanh(softplus)
+        sech_term = 1 / (np.cosh(softplus))**2
         return tanh_term + x * sech_term * (1 / (1 + np.exp(-x)))
 
 class Softmax(ActivationFunction):
