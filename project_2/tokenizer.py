@@ -2,6 +2,14 @@ import os
 import argparse
 import sentencepiece as spm
 
+def add_special_tokens(pairs: tuple[list]) -> tuple[list, list]:
+    """
+    Inserts <bos> and <eos> tokens in the dataset
+
+    :param pairs(tuple[list]): THe original prompts and expected completions 
+    :return tuple(new_prompts(list), new_completions(list)): Prompts/completions pairs with special tokens
+    """
+
 def merge_text_files(input_dir: str, output_file: str):
     """
     Merges all text files in the input directory into a single text file.

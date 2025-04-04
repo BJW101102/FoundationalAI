@@ -102,6 +102,7 @@ class MultilayerPerceptron:
     def __init__(self, layers: Tuple[Layer] | list[Layer]):
         """
         Create a multilayer perceptron (densely connected multilayer neural network)
+        
         :param layers: list or Tuple of layers
         """
         self.layers = layers
@@ -109,6 +110,7 @@ class MultilayerPerceptron:
     def forward(self, x: np.ndarray) -> np.ndarray:
         """
         This takes the network input and computes the network output (forward propagation)
+
         :param network_input: network input
         :return: network output
         """
@@ -120,6 +122,7 @@ class MultilayerPerceptron:
     def backward(self, loss_grad: np.ndarray, input_data: np.ndarray) -> Tuple[list, list]:
         """
         Applies backpropagation to compute the gradients of the weights and biases for all layers in the network
+
         :param loss_grad: gradient of the loss function
         :param input_data: network's input data
         :return: (List of weight gradients for all layers, List of bias gradients for all layers)
