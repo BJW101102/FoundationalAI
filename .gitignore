@@ -96,5 +96,4 @@ out/
 .env.*
 
 datasets
-data
 help.py
