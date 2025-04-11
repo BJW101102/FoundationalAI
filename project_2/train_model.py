@@ -57,18 +57,22 @@ def train_model(model_type: str, train_file: str, output: str, batch_size: int, 
     :return tuple[list[float], list[float]]: A tuple containing the training and validation losses.
     """
     # Initializing device
+    print("Initializing device...")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     # Loading Tokenizer
+    print("Loading Tokenizer...")
     tokenizer = SentencePieceProcessor()
     tokenizer.Load(model_file='bpe_tokenizer.model')
     vocab_size = tokenizer.vocab_size()
 
     # Loading Dataset
+    print("Loading Dataset...")
     train_dataset = TextDataset(train_file, tokenizer=tokenizer, max_seq_len=128)
     train_loader, val_loader = split_test_val(test_dataset=train_dataset, batch_size=batch_size)
     
     # Initializing Model Architecture & Moving to device
+    print("Initializing Model...")
     if model_type == 'rnn':
         model = RNNModule(tokenizer=tokenizer, vocab_size=vocab_size).to(device) 
     elif model_type == 'lstm':
