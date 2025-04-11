@@ -1,7 +1,4 @@
 import torch
-import json
-from torch.utils.data import Dataset
-from models.rnn import RNNModule
 from models.lstm import LSTMModule
 from sentencepiece import SentencePieceProcessor
 
@@ -20,11 +17,12 @@ if __name__ == '__main__':
     prompt = "What do you prefer? Cats or Dogs?"
     max_output = 50  # Max number of tokens to generate
     eos_token_ids = tokenizer.EncodeAsIds("<eos>")  # Specify the EOS token ID, if applicable
-
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     generated_text = model.generate(
         prompt=prompt,
         max_output=max_output,
-        eos_token_ids=eos_token_ids # Fix this
+        eos_token_ids=eos_token_ids, # Fix this
+        device=device
     )
 
     # Print the generated text
