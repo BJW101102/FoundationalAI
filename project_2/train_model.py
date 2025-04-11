@@ -11,7 +11,7 @@ from datasetup.dataset import TextDataset
 from sentencepiece import SentencePieceProcessor
 from torch.utils.data import DataLoader, random_split
 
-def dump_pickle(losses: tuple[list, list], model_type: str, output: str) -> None:
+def dump_pickle(losses: tuple[list, list], model_type: str, output: str):
     """
     Dumps the training and validation losses to a pickle file.
     

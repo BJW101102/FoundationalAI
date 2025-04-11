@@ -31,12 +31,11 @@ do
     fi
 
     echo "Launching $MODEL_TYPE on GPU $i..."
-
     CUDA_VISIBLE_DEVICES=$i python $SCRIPT_PATH \
         --model_type $MODEL_TYPE \
         --train "$TRAIN_FILE" \
         --output "${OUTPUT_DIR}" 
-    echo "Started training $MODEL_TYPE on GPU $i → Output: ${OUTPUT_DIR}/gpu_$i"
+    echo "Finished $MODEL_TYPE on GPU $i."
 done
 
-echo "All training jobs launched."
+echo "All training jobs finished."
