@@ -34,9 +34,10 @@ do
     CUDA_VISIBLE_DEVICES=$i python $SCRIPT_PATH \
         --model_type $MODEL_TYPE \
         --train "$TRAIN_FILE" \
-        --output "${OUTPUT_DIR}/$MODEL_TYPE" &
+        --output "${OUTPUT_DIR}" &
 
 done
 
 wait
 echo "All training jobs finished."
+
