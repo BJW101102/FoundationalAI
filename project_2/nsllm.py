@@ -1,5 +1,6 @@
 import torch
 from models.lstm import LSTMModule
+from models.rnn import RNNModule
 from sentencepiece import SentencePieceProcessor
 
 

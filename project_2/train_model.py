@@ -7,6 +7,7 @@ import torch.nn as nn
 from torch import optim, Tensor
 from models.rnn import RNNModule
 from models.lstm import LSTMModule
+from models.transformer import TransformerModule
 from datasetup.dataset import TextDataset
 from sentencepiece import SentencePieceProcessor
 from torch.utils.data import DataLoader, random_split
@@ -77,6 +78,8 @@ def train_model(model_type: str, train_file: str, output: str, batch_size: int, 
         model = RNNModule(tokenizer=tokenizer, vocab_size=vocab_size).to(device) 
     elif model_type == 'lstm':
         model = LSTMModule(tokenizer=tokenizer, vocab_size=vocab_size).to(device) 
+    elif model_type == 'transformer':
+        model = TransformerModule(tokenizer=tokenizer, vocab_size=vocab_size).to(device)
     else:
         raise ValueError(f"Model Type {model_type} is not supported.")
 

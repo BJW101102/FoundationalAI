@@ -18,7 +18,6 @@ class TextDataset(Dataset):
                 samples.append(token_ids)
         return samples
 
-
     def __init__(self, filepath: str, tokenizer: SentencePieceProcessor, max_seq_len: int = 128):
         self.tokenizer = tokenizer
         self.max_seq_len = max_seq_len

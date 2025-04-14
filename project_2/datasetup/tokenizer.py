@@ -2,14 +2,6 @@ import os
 import argparse
 import sentencepiece as spm
 
-def add_special_tokens(pairs: tuple[list]) -> tuple[list, list]:
-    """
-    Inserts <bos> and <eos> tokens in the dataset
-
-    :param pairs(tuple[list]): THe original prompts and expected completions 
-    :return tuple(new_prompts(list), new_completions(list)): Prompts/completions pairs with special tokens
-    """
-
 def merge_text_files(input_dir: str, output_file: str):
     """
     Merges all text files in the input directory into a single text file.
@@ -22,7 +14,6 @@ def merge_text_files(input_dir: str, output_file: str):
             if filename.endswith('.txt'):
                 with open(os.path.join(input_dir, filename), 'r', encoding='utf-8') as infile:
                     outfile.write(infile.read() + '\n')
-
 
 def tokenize_data(corpus: str, model_prefix: str, vocab_size: int = 10000) -> str:
     """
@@ -47,8 +38,6 @@ def tokenize_data(corpus: str, model_prefix: str, vocab_size: int = 10000) -> st
     )
     path = f'{model_prefix}.model'
     return path
-
-    
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Tokenize text data using SentencePiece.')

@@ -5,16 +5,18 @@ from torch import Tensor
 from typing import Tuple
 from torch.types import Number
 from sentencepiece import SentencePieceProcessor
+from base import BaseModel
 
-class RNNModule(nn.Module):
-
+class RNNModule(BaseModel):
     def __init__(self, tokenizer: SentencePieceProcessor, vocab_size: int, embed_dim: int=256, hidden_dim: int=512, num_layers: int=6, dropout: float=0.2, pad_token_id: int=0, device:str='cpu'):
-        super(RNNModule, self).__init__()
-        self.tokenizer = tokenizer
-        # Converts token IDs into dense vector representations, allowing the model to capture semantic relationships between tokens.
-        self.embedding = nn.Embedding(num_embeddings=vocab_size, embedding_dim=embed_dim, padding_idx=pad_token_id) 
-        # Hidden-to-Output Layer: mapping hidden state -> output (Fully Connected/Dense Layer)
-        self.fc = nn.Linear(in_features=hidden_dim, out_features=vocab_size)          
+        super(RNNModule, self).__init__(
+            tokenizer=tokenizer,
+            vocab_size=vocab_size, 
+            embed_dim=embed_dim, 
+            fc_in_features=hidden_dim, 
+            pad_token_id=pad_token_id
+        )        
+
         self.model = nn.RNN(input_size=embed_dim, hidden_size=hidden_dim, num_layers=num_layers, batch_first=True, dropout=dropout).to(device)
 
     def forward(self, input_ids: list[int] | Tensor, prev_hidden: Tensor =None) -> Tuple[Tensor, Tensor]:
