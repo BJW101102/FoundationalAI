@@ -5,6 +5,7 @@ import pickle
 import argparse
 import torch.nn as nn
 from torch import optim, Tensor
+from models.base import perform_forward_pass
 from models.rnn import RNNModule
 from models.lstm import LSTMModule
 from models.transformer import TransformerModule
@@ -49,7 +50,7 @@ def split_test_val(test_dataset: TextDataset, batch_size: float, val_percent: fl
     train_loader = DataLoader(dataset=train_subset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
     val_loader = DataLoader(dataset=val_subset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
     return train_loader, val_loader
-
+    
 def train_model(model_type: str, train_file: str, output: str, batch_size: int, learning_rate: float, epochs: int, early_stopping_patience: int) -> tuple[list[float], list[float]]:
     """
     Trains the model using the specified model type.
@@ -89,7 +90,7 @@ def train_model(model_type: str, train_file: str, output: str, batch_size: int, 
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', patience=1, factor=0.5, verbose=True)
     criterion = nn.CrossEntropyLoss(ignore_index=3) 
 
-    # Setting training parameters
+    # Setting training variables
     best_val_loss = float('inf')
     no_improve_epochs = 0
     train_losses = []
@@ -109,13 +110,8 @@ def train_model(model_type: str, train_file: str, output: str, batch_size: int, 
             optimizer.zero_grad()
 
             # Step 1: Performing a forward pass
-            logits: Tensor
-            if model_type == 'transformer':
-                logits = model(input_ids)
-            else:
-                logits, _ = model(input_ids)
-
-
+            logits = perform_forward_pass(model=model, input_ids=input_ids, target_ids=target_ids, model_type=model_type)
+          
             # Step 2: Computing loss gradient
             loss: Tensor = criterion(logits.view(-1, logits.size(-1)), target_ids.view(-1))
 
@@ -136,13 +132,14 @@ def train_model(model_type: str, train_file: str, output: str, batch_size: int, 
             for input_ids, target_ids in tqdm.tqdm(val_loader, desc=f"{model_type}_valid {epoch+1}/{epochs}"):
                 input_ids: Tensor = input_ids.to(device)
                 target_ids: Tensor = target_ids.to(device)
+                logits = perform_forward_pass(model=model, input_ids=input_ids, model_type=model_type)
                 logits, _ = model(input_ids)
                 val_loss: Tensor = criterion(logits.view(-1, logits.size(-1)), target_ids.view(-1))
-                total_val_loss += val_loss.item()
-        
-        # Calculating the the loss & adjusting learning rate
+                total_val_loss += val_loss.item()        
         avg_val_loss = total_val_loss / len(val_loader)
         val_losses.append(avg_val_loss)
+
+        # Adjust the learning rate
         scheduler.step(avg_val_loss)
 
         # Detecting Early Stoppage

@@ -1,9 +1,8 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+from torch import Tensor
 from abc import ABC, abstractmethod
 from sentencepiece import SentencePieceProcessor
-from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 
 class BaseModel(ABC, nn.Module):
     def __init__(self, device: str, tokenizer: SentencePieceProcessor, vocab_size: int, embed_dim: int, fc_in_features: int, pad_token_id: int):
@@ -36,45 +35,19 @@ class BaseModel(ABC, nn.Module):
         """Generates text from the given prompt."""
         pass
 
-    def compute_perplexity(self, logits: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        """
-        Computes the perplexity for a sequence based on model logits and the target.
+def perform_forward_pass(model: BaseModel, input_ids: Tensor, target_ids: Tensor, model_type: str) -> Tensor:
+    """
+    Performs a forward pass through the model for the correct model_type
 
-        :param logits: The model's logits (logits of shape [batch_size, seq_len, vocab_size])
-        :param target: The target sequence of token ids (shape [batch_size, seq_len])
-        :return: Perplexity score (float)
-        """
-        # Compute cross-entropy loss (ignoring padding tokens)
-        loss = F.cross_entropy(logits.view(-1, logits.size(-1)), target.view(-1), reduction='mean')
+    :param model(BaseModel): The model
+    :param input_ids(Tensor): The input token ids
+    :param model_type(str): The type of model (rnn, lstm, or transformer)
+    :return logits(Tensor): The raw output of the model (logits)
+    """
 
-        # Compute perplexity as the exponential of the cross-entropy loss
-        perplexity = torch.exp(loss)
-
-        return perplexity.item()
-
-    def compute_bleu(self, predicted_ids: list[int], reference_ids: list[int], max_n: int = 4) -> float:
-        """
-        Computes BLEU score between predicted and reference sequences.
-
-        :param predicted_ids: List of predicted token IDs
-        :param reference_ids: List of reference token IDs (ground truth)
-        :param max_n: The maximum n-gram order to use when computing BLEU
-        :return: BLEU score (float between 0 and 1)
-        """
-        # Convert token IDs to tokens using the tokenizer
-        predicted_tokens = [self.tokenizer.IdToPiece([tid])[0] for tid in predicted_ids]
-        reference_tokens = [self.tokenizer.IdToPiece([tid])[0] for tid in reference_ids]
-
-        # Compute BLEU score using up to max_n-grams
-        weights = tuple(1.0 / max_n for _ in range(max_n))
-        smoothing = SmoothingFunction().method1
-        bleu_score = sentence_bleu(
-            [reference_tokens],
-            predicted_tokens,
-            weights=weights,
-            smoothing_function=smoothing
-        )
-
-        return bleu_score
-    
-    
+    if model_type == 'transformer':
+        src_ids = input_ids
+        logits = model.forward(src_ids=src_ids, tgt_ids=target_ids)
+    else:
+        logits, _ = model.forward(input_ids)
+    return logits

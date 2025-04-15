@@ -30,9 +30,9 @@ class TransformerModule(BaseModel):
         tokenizer: SentencePieceProcessor, 
         vocab_size: int, 
         embed_dim: int = 256, 
-        num_heads: int = 8, 
-        num_layers: int = 6, 
-        dim_feedforward: int = 512, 
+        num_heads: int = 8, # Splitting QKV vectors into num_head vector for multi-headed attention
+        num_layers: int = 6, # Number of stacked encoder/decoder components
+        dim_feedforward: int = 512, # Number of hidden layers in the MLP
         dropout: float = 0.1, 
         pad_token_id: int = 0,
         model_path:str|None=None):
@@ -46,8 +46,9 @@ class TransformerModule(BaseModel):
             pad_token_id=pad_token_id
         )  
 
-        self.encoder = self.embedding 
         self.pos_encoder = PositionalEncoding(embed_dim, dropout)
+        self.pos_decoder = PositionalEncoding(embed_dim, dropout)
+
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=embed_dim,
             nhead=num_heads,
@@ -55,66 +56,83 @@ class TransformerModule(BaseModel):
             dropout=dropout,
             batch_first=True
         )
-        self.decoder = self.fc
-        self.model = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+        
+        decoder_layer = nn.TransformerDecoderLayer(
+            d_model=embed_dim,
+            nhead=num_heads,
+            dim_feedforward=dim_feedforward,
+            dropout=dropout,
+            batch_first=True
+        )
+        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+        self.decoder = nn.TransformerDecoder(decoder_layer, num_layers=num_layers)
         
         if model_path:
             self.load_state_dict(torch.load(model_path, map_location=device))
         
         self.to(device)
+    
+    def forward(self, src_ids: Tensor, tgt_ids: Tensor, temperature: float = 0.8) -> Tensor:
+        """
+        Forward pass through encoder-decoder transformer.
+        :param src_ids: (batch_size, src_len)
+        :param tgt_ids: (batch_size, tgt_len)
+        :return: logits (batch_size, tgt_len, vocab_size)
+        """
 
-    def forward(self, input_ids: Tensor, temperature: float = 0.8) -> Tensor:
-        """
-        Forward pass through the Transformer model.
-        :param input_ids (Tensor): Tensor of shape (batch_size, sequence_length)
-        :param temperature (float): Temperature parameter for scaling the logits
-        :return: Logits (Tensor of shape (batch_size, sequence_length, vocab_size))
-        """
-        # Step 1: Embed the tokens (Transform each token into a vector representation, at first is randomized)
-        embeddings = self.encoder.forward(input_ids)  
+        # Step 1: Embed the tokens (Transform each token in a vector representation, at first is randomized)
+        src_embs = self.embedding.forward(src_ids)
+        tgt_embs = self.embedding.forward(tgt_ids)
 
         # Step 2: Apply positional encoding to retain information about the order of tokens in the sequence
-        positionally_encoded = self.pos_encoder.forward(embeddings)
+        src_emb = self.pos_encoder.forward(src_embs)
+        tgt_emb = self.pos_decoder.forward(tgt_embs)
 
-        # Step 3: Pass the encoded inputs through the Transformer to capture contextual meaning of each token
-        transformer_output = self.model.forward(positionally_encoded)
+        # Step 3: Encode the source sequence into memory representation (Purpose: Map all input sequence into an abstract continuous representation that holds the learned information for that whole input sequence)
+        memory = self.encoder.forward(src_emb)
 
-        # Step 4: Apply a linear layer to map outputs to vocabulary logits (Decoder)
-        logits = self.decoder.forward(transformer_output)
+        # Step 4: Decode the target sequence using the memory from the encoder (Purpose: Generate text sequence with the learned attention and memory from the encoding layer)
+        output = self.decoder.forward(tgt=tgt_emb, memory=memory)
 
-        # Step 5: Apply temperature scaling
-        logits = logits / temperature
+        # Step 5: Apply a fully connected (linear) layer to map outputs to vocabulary logits
+        logits = self.fc.forward(output)
+
+        # Step 6: Applying temperature scaling
+        logits = logits/temperature
+
         return logits
 
-    def predict_next_token(self, temperature: float, input_ids: Tensor) -> Tuple[Number, None]:
+    def predict_next_token(self, src_ids: Tensor, tgt_ids: Tensor, temperature:float) -> Tuple[Number, None]:
         """
         Predicts the next token from the input sequence using temperature-based sampling.
         """
         self.eval()
         with torch.no_grad():
-            logits = self.forward(input_ids=input_ids, temperature=temperature)
-            logits = logits[:, -1, :]  # Use only the last token's logits for next-token prediction
-        
-        probabilities = F.softmax(logits, dim=-1)
-        predicted_token_id = torch.multinomial(probabilities, num_samples=1)
+            logits = self.forward(src_ids=src_ids, tgt_ids=tgt_ids, temperature=temperature)
+            
+            # Apply softmax to get probabilities & sample from the distribution
+            probabilities = F.softmax(logits, dim=-1)[0, -1]  # Last timestamp
+            predicted_token_id = torch.multinomial(probabilities, num_samples=1)
 
-        return predicted_token_id.item(), None
+        return predicted_token_id.item()
 
     def generate(self, prompt: str, max_output: int, eos_token_ids: list[int], temperature: float = 0.8) -> str:
         """
         Generates a continuation for a given prompt using autoregressive decoding.
         """
         self.eval()
-        input_token_ids: list[int] = self.tokenizer.Encode(prompt, out_type=int)
+        src_token_ids: list[int] = self.tokenizer.Encode(prompt, out_type=int)
+        src_tensor = torch.tensor([src_token_ids], dtype=torch.long, device=self.device)
         generated_ids = []
+        tgt_input_ids = [self.tokenizer.bos_id()]  
 
         for _ in range(max_output):
-            input_tensor = torch.tensor([input_token_ids], dtype=torch.long, device=self.device)
-            next_token_id, _ = self.predict_next_token(temperature, input_tensor)
+            target_tensor = torch.tensor([tgt_input_ids], dtype=torch.long, device=self.device)
+            next_token_id  = self.predict_next_token(src_ids=src_tensor, tgt_ids=target_tensor, temperature=temperature)
             if next_token_id in eos_token_ids:
                 break
             generated_ids.append(next_token_id)
-            input_token_ids.append(next_token_id)
+            tgt_input_ids.append(next_token_id)
 
         output = self.tokenizer.Decode(generated_ids, out_type=str)
         return output

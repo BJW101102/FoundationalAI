@@ -17,7 +17,7 @@ class LSTMModule(BaseModel):
             fc_in_features=hidden_dim, 
             pad_token_id=pad_token_id
         )
-        self.model = nn.LSTM(input_size=embed_dim, hidden_size=hidden_dim, num_layers=num_layers, batch_first=True, dropout=dropout).to(device)
+        self.lstm = nn.LSTM(input_size=embed_dim, hidden_size=hidden_dim, num_layers=num_layers, batch_first=True, dropout=dropout).to(device)
         if model_path:
             self.load_state_dict(torch.load(model_path, map_location=device))
         self.to(device)
@@ -37,9 +37,9 @@ class LSTMModule(BaseModel):
         embeddings = self.embedding.forward(input_ids)
 
         # Step 2: Pass embeddings through the LSTM to capture sequential dependencies and update hidden/cell states
-        output, (hidden_state, cell_state) = self.model.forward(input=embeddings, hx=prev_state)
+        output, (hidden_state, cell_state) = self.lstm.forward(input=embeddings, hx=prev_state)
 
-        # Step 3: Apply a linear layer to map outputs to vocabulary logits
+        # Step 3: Apply a fully connected (linear) layer to map outputs to vocabulary logits
         logits = self.fc.forward(input=output)
 
         # Step 4: Applying temperature scaling
@@ -52,8 +52,9 @@ class LSTMModule(BaseModel):
         with torch.no_grad():
             logits, new_state = self.forward(input_ids=input_ids, prev_state=state, temperature=temperature)
 
-        probabilities = F.softmax(logits, dim=-1)[0, -1]
-        predicted_token_id = torch.multinomial(probabilities, num_samples=1)
+            # Apply softmax to get probabilities & sample from the distribution
+            probabilities = F.softmax(logits, dim=-1)[0, -1]  # Last timestamp
+            predicted_token_id = torch.multinomial(probabilities, num_samples=1)
 
         return predicted_token_id.item(), new_state
     
@@ -74,8 +75,9 @@ class LSTMModule(BaseModel):
         input_tensor = torch.tensor(data=input_token_ids, dtype=torch.long, device=self.device).unsqueeze(dim=0)
 
         # Initializing hidden and cell state to be zeros
-        hidden_state = torch.zeros(self.model.num_layers, input_tensor.size(0), self.model.hidden_size).to(input_tensor.device)
-        cell_state = torch.zeros(self.model.num_layers, input_tensor.size(0), self.model.hidden_size).to(input_tensor.device)
+        hidden_state = torch.zeros(self.lstm.num_layers, input_tensor.size(0), self.lstm.hidden_size).to(input_tensor.device)
+        cell_state = torch.zeros(self.lstm.num_layers, input_tensor.size(0), self.lstm.hidden_size).to(input_tensor.device)
+
         for _ in range(max_output):
             next_token_id, (hidden_state, cell_state) = self.predict_next_token(
                 temperature=temperature, 

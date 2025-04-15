@@ -18,7 +18,7 @@ class RNNModule(BaseModel):
             pad_token_id=pad_token_id
         )        
 
-        self.model = nn.RNN(input_size=embed_dim, hidden_size=hidden_dim, num_layers=num_layers, batch_first=True, dropout=dropout).to(device)
+        self.rnn = nn.RNN(input_size=embed_dim, hidden_size=hidden_dim, num_layers=num_layers, batch_first=True, dropout=dropout).to(device)
         if model_path:
             self.load_state_dict(torch.load(model_path, map_location=device))
         self.to(device)
@@ -39,9 +39,9 @@ class RNNModule(BaseModel):
         embeddings = self.embedding.forward(input_ids)
         
         # Step 2: Pass through the network layers (Model is capturing semantics of the embeddings)
-        output, current_hidden = self.model.forward(input=embeddings, hx=prev_hidden)
+        output, current_hidden = self.rnn.forward(input=embeddings, hx=prev_hidden)
 
-        # Step 3: Apply a linear layer to map outputs to vocabulary logits
+        # Step 3: Apply a fully connected (linear) layer to map outputs to vocabulary logits
         logits = self.fc.forward(input=output)
 
         # Step 4: Applying temperature scaling
@@ -50,18 +50,15 @@ class RNNModule(BaseModel):
 
         return logits, current_hidden        
 
-    def predict_next_token(self, temperature: float, input_ids: list[int], hidden=None) -> Tuple[Number, torch.Tensor]:
+    def predict_next_token(self, temperature: float, input_ids: list[int], hidden=None) -> Tuple[Number, Tensor]:
         self.eval()
 
         with torch.no_grad():
             logits, hidden = self.forward(input_ids=input_ids, prev_hidden=hidden, temperature=temperature)
 
-
-        # Apply softmax to get probabilities
-        probabilities = F.softmax(logits, dim=-1)[0, -1]  # Last timestamp
-
-        # Sample from the distribution
-        predicted_token_id = torch.multinomial(probabilities, num_samples=1)
+            # Apply softmax to get probabilities & sample from the distribution
+            probabilities = F.softmax(logits, dim=-1)[0, -1]  # Last timestamp
+            predicted_token_id = torch.multinomial(probabilities, num_samples=1)
 
         return predicted_token_id.item(), hidden
     
@@ -76,10 +73,10 @@ class RNNModule(BaseModel):
         :param device(str): The device to run the model on (cpu | gpu)
         """
         
-        self.model.eval()
+        self.rnn.eval()
         input_token_ids = self.tokenizer.Encode(input=prompt, out_type=int)
         input_tensor = torch.tensor(data=input_token_ids, dtype=torch.long, device=self.device).unsqueeze(dim=0)
-        hidden = torch.zeros(self.model.num_layers, input_tensor.size(0), self.model.hidden_size).to(input_tensor.device)
+        hidden = torch.zeros(self.rnn.num_layers, input_tensor.size(0), self.rnn.hidden_size).to(input_tensor.device)
 
         generated_ids = []
         for _ in range(max_output):
