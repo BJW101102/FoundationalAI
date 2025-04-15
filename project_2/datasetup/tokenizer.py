@@ -44,9 +44,7 @@ if __name__ == '__main__':
     parser.add_argument('--c', type=str, required=True, help='Directory containing text files to merge and tokenize.')
     parser.add_argument('--o', type=str, required=True, help='Output file for merged text.')
     parser.add_argument('--n', type=str, required=True, help='Prefix for the output SentencePiece model files.')
-
     args = parser.parse_args()
-
     corpus_path = args.c
     output_file = args.o   
     model_prefix = args.n

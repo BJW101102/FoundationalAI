@@ -163,11 +163,10 @@ if __name__ == '__main__':
     parser.add_argument('--model_type', type=str, required=True, help='The type of model to be trained (rnn, lstm, gru, transformer).')
     parser.add_argument('--train', type=str, required=True, help='The path to the training file.')
     parser.add_argument('--output', type=str, required=True, help='Directory to store both the model parameters and losses.')
-    parser.add_argument('--batch_size', type=int, default=16, help='Batch size for training.')
+    parser.add_argument('--batch_size', type=int, default=128, help='Batch size for training.')
     parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate for the optimizer.')
     parser.add_argument('--epochs', type=int, default=32, help='The number of epochs for training.')
     parser.add_argument('--early', type=int,  default=3, help='The number of epochs for early stopping.')
-
     args = parser.parse_args()
     model_type = args.model_type
     train_file = args.train
