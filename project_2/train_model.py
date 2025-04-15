@@ -132,8 +132,7 @@ def train_model(model_type: str, train_file: str, output: str, batch_size: int, 
             for input_ids, target_ids in tqdm.tqdm(val_loader, desc=f"{model_type}_valid {epoch+1}/{epochs}"):
                 input_ids: Tensor = input_ids.to(device)
                 target_ids: Tensor = target_ids.to(device)
-                logits = perform_forward_pass(model=model, input_ids=input_ids, model_type=model_type)
-                logits, _ = model(input_ids)
+                logits = perform_forward_pass(model=model, input_ids=input_ids, target_ids=target_ids, model_type=model_type)
                 val_loss: Tensor = criterion(logits.view(-1, logits.size(-1)), target_ids.view(-1))
                 total_val_loss += val_loss.item()        
         avg_val_loss = total_val_loss / len(val_loader)
