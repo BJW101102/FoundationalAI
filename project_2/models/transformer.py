@@ -45,6 +45,8 @@ class TransformerModule(BaseModel):
             fc_in_features=embed_dim, 
             pad_token_id=pad_token_id
         )  
+
+        self.encoder = self.embedding 
         self.pos_encoder = PositionalEncoding(embed_dim, dropout)
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=embed_dim,
@@ -53,36 +55,35 @@ class TransformerModule(BaseModel):
             dropout=dropout,
             batch_first=True
         )
-        self.decoder_layer = nn.TransformerDecoderLayer(d_model=embed_dim,
-            nhead=num_heads,
-            dim_feedforward=dim_feedforward,
-            dropout=dropout,
-            batch_first=True)
-        self.model = nn.TransformerEncoder(encoder_layer, num_layers=num_layers).to(device)
+        self.decoder = self.fc
+        self.model = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+        
         if model_path:
             self.load_state_dict(torch.load(model_path, map_location=device))
+        
+        self.to(device)
 
-    def forward(self, input_ids: Tensor, temperature: float=0.8) -> Tensor:
+    def forward(self, input_ids: Tensor, temperature: float = 0.8) -> Tensor:
         """
         Forward pass through the Transformer model.
         :param input_ids (Tensor): Tensor of shape (batch_size, sequence_length)
+        :param temperature (float): Temperature parameter for scaling the logits
         :return: Logits (Tensor of shape (batch_size, sequence_length, vocab_size))
         """
-        # Step 1: Embed the tokens (Transform each token in a vector representation, at first is randomized)
-        embeddings = self.embedding.forward(input_ids)
+        # Step 1: Embed the tokens (Transform each token into a vector representation, at first is randomized)
+        embeddings = self.encoder.forward(input_ids)  
 
-        # Step 2:  Apply positional encoding to retain information about the order of tokens in the sequence
-        positionally_encoded  = self.pos_encoder.forward(embeddings)
-        
+        # Step 2: Apply positional encoding to retain information about the order of tokens in the sequence
+        positionally_encoded = self.pos_encoder.forward(embeddings)
+
         # Step 3: Pass the encoded inputs through the Transformer to capture contextual meaning of each token
-        transformer_output  = self.model.forward(positionally_encoded)
+        transformer_output = self.model.forward(positionally_encoded)
 
-        # Step 4: Apply a linear layer to map outputs to vocabulary logits
-        logits = self.fc.forward(transformer_output)
+        # Step 4: Apply a linear layer to map outputs to vocabulary logits (Decoder)
+        logits = self.decoder.forward(transformer_output)
 
-        # Step 5: Applying temperature scaling
+        # Step 5: Apply temperature scaling
         logits = logits / temperature
-        
         return logits
 
     def predict_next_token(self, temperature: float, input_ids: Tensor) -> Tuple[Number, None]:
@@ -93,7 +94,7 @@ class TransformerModule(BaseModel):
         with torch.no_grad():
             logits = self.forward(input_ids=input_ids, temperature=temperature)
             logits = logits[:, -1, :]  # Use only the last token's logits for next-token prediction
-
+        
         probabilities = F.softmax(logits, dim=-1)
         predicted_token_id = torch.multinomial(probabilities, num_samples=1)
 

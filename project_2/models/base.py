@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from abc import ABC
+from abc import ABC, abstractmethod
 from sentencepiece import SentencePieceProcessor
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 
@@ -20,6 +20,21 @@ class BaseModel(ABC, nn.Module):
 
         # Hidden-to-Output Layer: mapping input -> output (Fully Connected/Dense Layer)
         self.fc = nn.Linear(in_features=fc_in_features, out_features=vocab_size)
+
+    @abstractmethod
+    def forward(self, *args, **kwargs) -> torch.Tensor:
+        """Defines the forward pass of the model."""
+        pass
+
+    @abstractmethod
+    def predict_next_token(self, *args, **kwargs):
+        """Predicts the next token given an input sequence."""
+        pass
+
+    @abstractmethod
+    def generate(self, prompt: str, max_output: int, eos_token_ids: list[int], temperature: float = 0.8) -> str:
+        """Generates text from the given prompt."""
+        pass
 
     def compute_perplexity(self, logits: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         """
@@ -61,3 +76,5 @@ class BaseModel(ABC, nn.Module):
         )
 
         return bleu_score
+    
+    

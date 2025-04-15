@@ -60,7 +60,8 @@ def train_model(model_type: str, train_file: str, output: str, batch_size: int, 
     # Initializing device
     print("Initializing device...")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
+    print(device)
+
     # Loading Tokenizer
     print("Loading Tokenizer...")
     tokenizer = SentencePieceProcessor()
@@ -75,11 +76,11 @@ def train_model(model_type: str, train_file: str, output: str, batch_size: int, 
     # Initializing Model Architecture & Moving to device
     print("Initializing Model...")
     if model_type == 'rnn':
-        model = RNNModule(tokenizer=tokenizer, vocab_size=vocab_size).to(device) 
+        model = RNNModule(tokenizer=tokenizer, vocab_size=vocab_size, device=device).to(device)
     elif model_type == 'lstm':
-        model = LSTMModule(tokenizer=tokenizer, vocab_size=vocab_size).to(device) 
+        model = LSTMModule(tokenizer=tokenizer, vocab_size=vocab_size, device=device).to(device)
     elif model_type == 'transformer':
-        model = TransformerModule(tokenizer=tokenizer, vocab_size=vocab_size).to(device)
+        model = TransformerModule(tokenizer=tokenizer, vocab_size=vocab_size, device=device).to(device)
     else:
         raise ValueError(f"Model Type {model_type} is not supported.")
 
@@ -109,7 +110,11 @@ def train_model(model_type: str, train_file: str, output: str, batch_size: int, 
 
             # Step 1: Performing a forward pass
             logits: Tensor
-            logits, _ = model(input_ids)
+            if model_type == 'transformer':
+                logits = model(input_ids)
+            else:
+                logits, _ = model(input_ids)
+
 
             # Step 2: Computing loss gradient
             loss: Tensor = criterion(logits.view(-1, logits.size(-1)), target_ids.view(-1))
@@ -163,7 +168,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_type', type=str, required=True, help='The type of model to be trained (rnn, lstm, gru, transformer).')
     parser.add_argument('--train', type=str, required=True, help='The path to the training file.')
     parser.add_argument('--output', type=str, required=True, help='Directory to store both the model parameters and losses.')
-    parser.add_argument('--batch_size', type=int, default=128, help='Batch size for training.')
+    parser.add_argument('--batch_size', type=int, default=16, help='Batch size for training.')
     parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate for the optimizer.')
     parser.add_argument('--epochs', type=int, default=32, help='The number of epochs for training.')
     parser.add_argument('--early', type=int,  default=3, help='The number of epochs for early stopping.')

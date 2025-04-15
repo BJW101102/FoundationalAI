@@ -6,7 +6,7 @@ OUTPUT_DIR="./project_2/model_results"
 TRAIN_FILE="./project_2/gutenburg/data/train.jsonl"  
 
 # Define model types based on number of GPUs
-MODEL_TYPES=("rnn" "lstm" "gru" "transformer")
+MODEL_TYPES=("rnn" "lstm" "transformer")
 
 # Clear existing GPU memory
 echo "Clearing GPU memory..."

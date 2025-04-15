@@ -21,6 +21,8 @@ class RNNModule(BaseModel):
         self.model = nn.RNN(input_size=embed_dim, hidden_size=hidden_dim, num_layers=num_layers, batch_first=True, dropout=dropout).to(device)
         if model_path:
             self.load_state_dict(torch.load(model_path, map_location=device))
+        self.to(device)
+
 
 
     def forward(self, input_ids: list[int] | Tensor, prev_hidden: Tensor=None, temperature:float=0.8) -> Tuple[Tensor, Tensor]:

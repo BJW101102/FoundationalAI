@@ -20,7 +20,7 @@ class LSTMModule(BaseModel):
         self.model = nn.LSTM(input_size=embed_dim, hidden_size=hidden_dim, num_layers=num_layers, batch_first=True, dropout=dropout).to(device)
         if model_path:
             self.load_state_dict(torch.load(model_path, map_location=device))
-            
+        self.to(device)
 
     def forward(self, input_ids: list[int] | Tensor, prev_state: Tuple[Tensor, Tensor] = None, temperature:float=0.8) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
 
@@ -51,8 +51,6 @@ class LSTMModule(BaseModel):
         self.eval()
         with torch.no_grad():
             logits, new_state = self.forward(input_ids=input_ids, prev_state=state, temperature=temperature)
-            # logits = logits / temperature
-
 
         probabilities = F.softmax(logits, dim=-1)[0, -1]
         predicted_token_id = torch.multinomial(probabilities, num_samples=1)
