@@ -57,8 +57,10 @@ class RNNModule(BaseModel):
             logits, hidden = self.forward(input_ids=input_ids, prev_hidden=hidden, temperature=temperature)
 
             # Apply softmax to get probabilities & sample from the distribution
+            top_k = 50
             probabilities = F.softmax(logits, dim=-1)[0, -1]  # Last timestamp
-            predicted_token_id = torch.multinomial(probabilities, num_samples=1)
+            top_k_probs, top_k_indices = torch.topk(probabilities, top_k)
+            predicted_token_id = top_k_indices[torch.multinomial(input=top_k_probs, num_samples=1)]
 
         return predicted_token_id.item(), hidden
     

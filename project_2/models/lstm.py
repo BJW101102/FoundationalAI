@@ -8,7 +8,7 @@ from sentencepiece import SentencePieceProcessor
 from .base import BaseModel
 
 class LSTMModule(BaseModel):
-    def __init__(self, device:str, tokenizer: SentencePieceProcessor, vocab_size: int, embed_dim: int=256, hidden_dim: int=512, num_layers: int=6, dropout: float=0.2, pad_token_id: int=0, model_path: str|None = None):
+    def __init__(self, device:str, tokenizer: SentencePieceProcessor, vocab_size: int, embed_dim: int=256, hidden_dim: int=1024, num_layers: int=6, dropout: float=0.2, pad_token_id: int=0, model_path: str|None = None):
         super(LSTMModule, self).__init__(
             device=device,
             tokenizer=tokenizer,
@@ -53,8 +53,10 @@ class LSTMModule(BaseModel):
             logits, new_state = self.forward(input_ids=input_ids, prev_state=state, temperature=temperature)
 
             # Apply softmax to get probabilities & sample from the distribution
+            top_k = 50
             probabilities = F.softmax(logits, dim=-1)[0, -1]  # Last timestamp
-            predicted_token_id = torch.multinomial(probabilities, num_samples=1)
+            top_k_probs, top_k_indices = torch.topk(probabilities, top_k)
+            predicted_token_id = top_k_indices[torch.multinomial(input=top_k_probs, num_samples=1)]
 
         return predicted_token_id.item(), new_state
     
