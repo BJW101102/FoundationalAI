@@ -89,7 +89,7 @@ if __name__ == '__main__':
     tokenizer.Load(model_file='bpe_tokenizer.model')
     vocab_size = tokenizer.vocab_size()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = TransformerModule(tokenizer=tokenizer, vocab_size=vocab_size, device=device)
+    model = LSTMModule(tokenizer=tokenizer, vocab_size=vocab_size, device=device, model_path='./project_2/model_results/lstm.pt')
     prompt = "Which do you prefer? Dogs or cats?"
     max_output = 50  
     eos_token_ids = tokenizer.EncodeAsIds("<eos>")  #
@@ -98,4 +98,4 @@ if __name__ == '__main__':
         max_output=max_output,
         eos_token_ids=eos_token_ids # Fix this
     )
-    print(generated_text)
+    

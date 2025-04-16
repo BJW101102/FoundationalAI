@@ -25,7 +25,6 @@ def tokenize_data(corpus: str, model_prefix: str, vocab_size: int = 10000) -> st
     :return path(str): Path to the generated model file.
     """
 
-    user_defined_symbols = ",".join(["<bos>", "<eos>", "<pad>"])
     spm.SentencePieceTrainer.Train(
         input=corpus, 
         model_prefix=model_prefix, 
@@ -34,7 +33,7 @@ def tokenize_data(corpus: str, model_prefix: str, vocab_size: int = 10000) -> st
         bos_id=1, 
         eos_id=2, 
         pad_id=3, 
-        user_defined_symbols=user_defined_symbols
+        user_defined_symbols=",".join(["<bos>", "<eos>", "<pad>"])
     )
     path = f'{model_prefix}.model'
     return path
