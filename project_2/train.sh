@@ -6,8 +6,8 @@ OUTPUT_DIR="./project_2/model_results"
 TRAIN_FILE="./project_2/gutenburg/data/train.jsonl"  
 
 # Define model types and corresponding epochs
-MODEL_TYPES=("rnn" "lstm" "transformer")
-EPOCHS=(30 30 20)
+MODEL_TYPES=("transformer" "lstm" "rnn")
+EPOCHS=(20 30 30)
 
 # Clear existing GPU memory
 echo "Clearing GPU memory..."

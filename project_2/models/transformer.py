@@ -8,7 +8,6 @@ from torch.types import Number
 from sentencepiece import SentencePieceProcessor
 from .base import BaseModel
 
-
 class PositionalEncoding(nn.Module):
     def __init__(self, embed_dim: int, dropout: float = 0.1, max_len: int = 5000):
         super(PositionalEncoding, self).__init__()
@@ -25,31 +24,31 @@ class PositionalEncoding(nn.Module):
         x = x + self.pe[:, :x.size(1)]
         return self.dropout(x)
 
-
 class TransformerModule(BaseModel):
     def __init__(self, 
         device: str,
         tokenizer: SentencePieceProcessor, 
         vocab_size: int, 
         embed_dim: int = 512, 
-        num_heads: int = 16, 
-        num_layers: int = 6, 
-        dim_feedforward: int = 1024, 
+        num_heads: int = 16, # Splitting QKV vectors into num_head vector for multi-headed attention
+        num_layers: int = 6, # Number of stacked decoder components
+        dim_feedforward: int = 1024, # Number of hidden layers in the MLP
         dropout: float = 0.1, 
         pad_token_id: int = 0,
         model_path: str = None):
 
-        super(TransformerModule, self).__init__(device=device,
-                                                tokenizer=tokenizer,
-                                                vocab_size=vocab_size, 
-                                                embed_dim=embed_dim, 
-                                                fc_in_features=embed_dim, 
-                                                pad_token_id=pad_token_id)
-
+        super(TransformerModule, self).__init__(
+            device=device,
+            tokenizer=tokenizer,
+            vocab_size=vocab_size, 
+            embed_dim=embed_dim, 
+            fc_in_features=embed_dim, 
+            pad_token_id=pad_token_id
+        )  
+        
         self.pos_encoder = PositionalEncoding(embed_dim, dropout)
         
-        # Use only decoder layers for decoder-only architecture
-        decoder_layer = nn.TransformerDecoderLayer(
+        encoder_layer = nn.TransformerEncoderLayer(
             d_model=embed_dim,
             nhead=num_heads,
             dim_feedforward=dim_feedforward,
@@ -57,13 +56,13 @@ class TransformerModule(BaseModel):
             batch_first=True
         )
         
-        self.decoder = nn.TransformerDecoder(decoder_layer, num_layers=num_layers)
-
+        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+        
         if model_path:
             self.load_state_dict(torch.load(model_path, map_location=device))
         
         self.to(device)
-
+    
     def forward(self, input_ids: Tensor, temperature: float = 0.8) -> Tensor:
         """
         Forward pass through the decoder-only transformer.
@@ -82,9 +81,8 @@ class TransformerModule(BaseModel):
             torch.full((seq_len, seq_len), float("-inf")), diagonal=1
         ).to(input_ids.device)
 
-        # Step 4: Decoder-only autoregressive operation (no encoder inputs)
-        memory = pos_emb  # Memory is just the positional encoded input sequence
-        output = self.decoder(pos_emb, memory, memory_key_padding_mask=None, tgt_mask=causal_mask)
+        # Step 4: Pass the embeddings through stacked Transformer blocks with causal masking
+        output = self.encoder.forward(pos_emb, mask=causal_mask)
 
         # Step 5: Project the final hidden states to vocabulary logits using a linear layer
         logits = self.fc.forward(output)
@@ -101,20 +99,20 @@ class TransformerModule(BaseModel):
         self.eval()
         with torch.no_grad():
             logits = self.forward(input_ids=input_ids, temperature=temperature)
-            # Now we grab the last token of the sequence
+            #now we grab the last token of the sequence
             logits = logits[:, -1, :]
             probs = torch.softmax(logits, dim=-1)
-            # Sort tokens from highest to lowest probability
+            #sort tokens from highest to lowest probability
             sorted_probs, sorted_indices = torch.sort(probs, descending=True)
-            # Cumulative sum of the sorted probabilities
+            #cumulative sum of the sorted probabilities
             cumulative_probs = torch.cumsum(sorted_probs, dim=-1)
-            # The smallest set where cumulative prob exceeds top_p
+            #the smallest set where cumulative prob exceeds top_p
             cutoff = cumulative_probs > 0.9
             if torch.any(cutoff):
                 cutoff_index = torch.min(torch.where(cutoff)[1]) + 1
             else:
                 cutoff_index = sorted_probs.shape[-1]
-
+           
             # Slice to get the nucleus set
             filtered_probs = sorted_probs[:, :cutoff_index]
             filtered_indices = sorted_indices[:, :cutoff_index]
@@ -136,7 +134,7 @@ class TransformerModule(BaseModel):
         
         # Encode the prompt into token ids using the tokenizer
         input_ids = self.tokenizer.Encode(input=prompt, out_type=int)
-        input_tensor = torch.tensor(input_ids, dtype=torch.long, device=self.device).unsqueeze(0)
+        input_tensor = torch.tensor(input_ids, dtype=torch.long, device=self.device).unsqueeze(0).to(self.device)
         generated_ids = []
         for _ in range(max_output):
             # Predict the next token using the model
@@ -147,3 +145,5 @@ class TransformerModule(BaseModel):
             input_tensor = torch.cat([input_tensor, torch.tensor([[next_token_id]], device=self.device)], dim=1)        
         output = self.tokenizer.Decode(generated_ids, out_type=str)        
         return output
+
+
