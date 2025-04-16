@@ -90,7 +90,7 @@ if __name__ == '__main__':
     vocab_size = tokenizer.vocab_size()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = TransformerModule(tokenizer=tokenizer, vocab_size=vocab_size, device=device)
-    prompt = "What do you prefer, Cats or Dogs?"
+    prompt = "Which do you prefer? Dogs or cats?"
     max_output = 50  
     eos_token_ids = tokenizer.EncodeAsIds("<eos>")  #
     generated_text = model.generate(

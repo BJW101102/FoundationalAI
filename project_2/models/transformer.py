@@ -46,9 +46,9 @@ class TransformerModule(BaseModel):
             pad_token_id=pad_token_id
         )  
         
-        self.pos_decoder = PositionalEncoding(embed_dim, dropout)
+        self.pos_encoder = PositionalEncoding(embed_dim, dropout)
         
-        decoder_layer = nn.TransformerDecoderLayer(
+        encoder_layer = nn.TransformerEncoderLayer(
             d_model=embed_dim,
             nhead=num_heads,
             dim_feedforward=dim_feedforward,
@@ -56,7 +56,7 @@ class TransformerModule(BaseModel):
             batch_first=True
         )
         
-        self.decoder = nn.TransformerDecoder(decoder_layer, num_layers=num_layers)
+        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
         
         if model_path:
             self.load_state_dict(torch.load(model_path, map_location=device))
@@ -69,25 +69,25 @@ class TransformerModule(BaseModel):
         :param input_ids: (batch_size, seq_len)
         :return: logits (batch_size, seq_len, vocab_size)
         """
-        # Step 1: Embed the tokens (Transform each token into a dense vector; initially randomized then learned during training)
+        # Step 1: Convert input token IDs into dense embeddings (learned during training)
         embeddings = self.embedding.forward(input_ids)
 
-        # Step 2: Apply positional encoding to retain information about the order of tokens in the sequence
-        pos_emb = self.pos_decoder.forward(embeddings)
+        # Step 2: Add positional encoding to provide order information to the model
+        pos_emb = self.pos_encoder.forward(embeddings)
 
-        # Step 3: Create a causal mask to prevent the model from attending to future positions (autoregressive behavior)
+        # Step 3: Create a causal attention mask to prevent the model from attending to future tokens
         seq_len = input_ids.size(1)
         causal_mask = torch.triu(
             torch.full((seq_len, seq_len), float("-inf")), diagonal=1
         ).to(input_ids.device)
 
-        # Step 4: Decode the sequence using the causal attention mask (Purpose: Learn dependencies in the token sequence so far)
-        output = self.decoder.forward(tgt=pos_emb, memory=pos_emb, tgt_mask=causal_mask)
+        # Step 4: Pass the embeddings through stacked Transformer blocks with causal masking
+        output = self.encoder.forward(pos_emb, mask=causal_mask)
 
-        # Step 5: Apply a fully connected (linear) layer to map the decoder output to vocabulary logits
+        # Step 5: Project the final hidden states to vocabulary logits using a linear layer
         logits = self.fc.forward(output)
 
-        # Step 6: Apply temperature scaling to adjust the sharpness of the output distribution
+        # Step 6: Scale the logits by temperature to control randomness during sampling
         logits = logits / temperature
         
         return logits
@@ -99,42 +99,57 @@ class TransformerModule(BaseModel):
         self.eval()
         with torch.no_grad():
             logits = self.forward(input_ids=input_ids, temperature=temperature)
-            
-            top_k = 50
-            probabilities = F.softmax(logits, dim=-1)[0, -1]  # Last token prediction
-            top_k_probs, top_k_indices = torch.topk(probabilities, top_k)
-            predicted_token_id = top_k_indices[torch.multinomial(top_k_probs, 1)]
+            #now we grab the last token of the sequence
+            logits = logits[:, -1, :]
+            probs = torch.softmax(logits, dim=-1)
+            #sort tokens from highest to lowest probability
+            sorted_probs, sorted_indices = torch.sort(probs, descending=True)
+            #cumulative sum of the sorted probabilities
+            cumulative_probs = torch.cumsum(sorted_probs, dim=-1)
+            #the smallest set where cumulative prob exceeds top_p
+            cutoff = cumulative_probs > 0.9
+            if torch.any(cutoff):
+                cutoff_index = torch.min(torch.where(cutoff)[1]) + 1
+            else:
+                cutoff_index = sorted_probs.shape[-1]
+           
+            # Slice to get the nucleus set
+            filtered_probs = sorted_probs[:, :cutoff_index]
+            filtered_indices = sorted_indices[:, :cutoff_index]
 
+            # Re-normalize
+            filtered_probs = filtered_probs / torch.sum(filtered_probs, dim=-1, keepdim=True)
+
+            sampled_token_idx = torch.multinomial(filtered_probs, num_samples=1)
+            predicted_token_id = filtered_indices[0, sampled_token_idx]
+            
         return predicted_token_id.item()
 
     def generate(self, prompt: str, max_output: int, eos_token_ids: list[int], temperature: float = 0.8) -> str:
         """
         Generates a continuation for a given prompt using autoregressive decoding.
+        Only the newly generated text (excluding the prompt) is returned.
         """
         self.eval()
         
         # Encode the prompt into token ids using the tokenizer
-        input_token_ids = self.tokenizer.Encode(input=prompt, out_type=int)  
-        input_tensor = torch.tensor(data=input_token_ids, dtype=torch.long, device=self.device).unsqueeze(dim=0)
+        input_token_ids = self.tokenizer.Encode(input=prompt, out_type=int)
 
         # Initialize the list to hold the generated token ids (starting with the prompt)
-        generated_ids: list = input_token_ids
+        generated_ids: list = input_token_ids.copy()
         
         for _ in range(max_output):
-            # Only pass the previously generated tokens (not the full prompt)
-            # Pass the last generated token as input for autoregressive generation
-            target_tensor = torch.tensor([generated_ids[-1:]], dtype=torch.long, device=self.device)
+            target_tensor = torch.tensor([generated_ids], dtype=torch.long, device=self.device)
 
-            # Predict the next token using the model (only based on the generated tokens)
+            # Predict the next token using the model
             next_token_id = self.predict_next_token(input_ids=target_tensor, temperature=temperature)
             
-            # Stop if the next token is in the end-of-sequence token list
             if next_token_id in eos_token_ids:
                 break
             
-            # Append the next token to the list of generated tokens
             generated_ids.append(next_token_id)
         
-        # Decode the generated token ids back to a string
-        output = self.tokenizer.Decode(generated_ids, out_type=str)
+        # Slice off the original prompt to return only the newly generated text
+        new_token_ids = generated_ids[len(input_token_ids):]
+        output = self.tokenizer.Decode(new_token_ids, out_type=str)        
         return output

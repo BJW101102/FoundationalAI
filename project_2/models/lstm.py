@@ -51,12 +51,29 @@ class LSTMModule(BaseModel):
         self.eval()
         with torch.no_grad():
             logits, new_state = self.forward(input_ids=input_ids, prev_state=state, temperature=temperature)
+            logits = logits[:, -1, :]
+            probs = torch.softmax(logits, dim=-1)
+            #sort tokens from highest to lowest probability
+            sorted_probs, sorted_indices = torch.sort(probs, descending=True)
+            #cumulative sum of the sorted probabilities
+            cumulative_probs = torch.cumsum(sorted_probs, dim=-1)
+            #the smallest set where cumulative prob exceeds top_p
+            cutoff = cumulative_probs > 0.9
+            if torch.any(cutoff):
+                cutoff_index = torch.min(torch.where(cutoff)[1]) + 1
+            else:
+                cutoff_index = sorted_probs.shape[-1]
+           
 
-            # Apply softmax to get probabilities & sample from the distribution
-            top_k = 50
-            probabilities = F.softmax(logits, dim=-1)[0, -1]  # Last timestamp
-            top_k_probs, top_k_indices = torch.topk(probabilities, top_k)
-            predicted_token_id = top_k_indices[torch.multinomial(input=top_k_probs, num_samples=1)]
+            # Slice to get the nucleus set
+            filtered_probs = sorted_probs[:, :cutoff_index]
+            filtered_indices = sorted_indices[:, :cutoff_index]
+
+            # Re-normalize
+            filtered_probs = filtered_probs / torch.sum(filtered_probs, dim=-1, keepdim=True)
+
+            sampled_token_idx = torch.multinomial(filtered_probs, num_samples=1)
+            predicted_token_id = filtered_indices[0, sampled_token_idx]
 
         return predicted_token_id.item(), new_state
     
