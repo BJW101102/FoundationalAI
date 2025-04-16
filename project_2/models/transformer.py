@@ -133,23 +133,15 @@ class TransformerModule(BaseModel):
         self.eval()
         
         # Encode the prompt into token ids using the tokenizer
-        input_token_ids = self.tokenizer.Encode(input=prompt, out_type=int)
-
-        # Initialize the list to hold the generated token ids (starting with the prompt)
-        generated_ids: list = input_token_ids.copy()
-        
+        input_ods = self.tokenizer.Encode(input=prompt, out_type=int)
+        input_tensor = torch.tensor(input_ods, dtype=torch.long, device=self.device).unsqueeze(0)
+        generated_ids = []
         for _ in range(max_output):
-            target_tensor = torch.tensor([generated_ids], dtype=torch.long, device=self.device)
-
             # Predict the next token using the model
-            next_token_id = self.predict_next_token(input_ids=target_tensor, temperature=temperature)
-            
+            next_token_id = self.predict_next_token(input_ids=input_tensor, temperature=temperature)
             if next_token_id in eos_token_ids:
                 break
-            
             generated_ids.append(next_token_id)
-        
-        # Slice off the original prompt to return only the newly generated text
-        new_token_ids = generated_ids[len(input_token_ids):]
-        output = self.tokenizer.Decode(new_token_ids, out_type=str)        
+            input_tensor = torch.cat([input_tensor, torch.tensor([[next_token_id]], device=self.device)], dim=1)        
+        output = self.tokenizer.Decode(generated_ids, out_type=str)        
         return output
