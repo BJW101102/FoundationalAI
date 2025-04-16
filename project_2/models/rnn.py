@@ -23,8 +23,6 @@ class RNNModule(BaseModel):
             self.load_state_dict(torch.load(model_path, map_location=device))
         self.to(device)
 
-
-
     def forward(self, input_ids: list[int] | Tensor, prev_hidden: Tensor=None, temperature:float=0.8) -> Tuple[Tensor, Tensor]:
         """
         Performs a forward pass through the RNN network and returns the logits (raw predictions)
@@ -79,15 +77,12 @@ class RNNModule(BaseModel):
         input_token_ids = self.tokenizer.Encode(input=prompt, out_type=int)
         input_tensor = torch.tensor(data=input_token_ids, dtype=torch.long, device=self.device).unsqueeze(dim=0)
         hidden = torch.zeros(self.rnn.num_layers, input_tensor.size(0), self.rnn.hidden_size).to(input_tensor.device)
-
         generated_ids = []
         for _ in range(max_output):
             next_token_id, hidden = self.predict_next_token(temperature=temperature, input_ids=input_tensor, hidden=hidden)
             if next_token_id in eos_token_ids:
                 break
-
             generated_ids.append(next_token_id)
             input_tensor = torch.tensor(data=[next_token_id], dtype=torch.long, device=self.device).unsqueeze(dim=0)
-
         output = self.tokenizer.Decode(input=generated_ids, out_type=str)
         return output

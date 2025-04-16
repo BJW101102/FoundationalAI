@@ -46,8 +46,7 @@ def perform_forward_pass(model: BaseModel, input_ids: Tensor, target_ids: Tensor
     """
 
     if model_type == 'transformer':
-        src_ids = input_ids
-        logits = model.forward(src_ids=src_ids, tgt_ids=target_ids)
+        logits = model.forward(input_ids)
     else:
         logits, _ = model.forward(input_ids)
     return logits

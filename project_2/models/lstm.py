@@ -75,23 +75,17 @@ class LSTMModule(BaseModel):
         self.eval()  
         input_token_ids = self.tokenizer.Encode(input=prompt, out_type=int)  
         input_tensor = torch.tensor(data=input_token_ids, dtype=torch.long, device=self.device).unsqueeze(dim=0)
-
-        # Initializing hidden and cell state to be zeros
         hidden_state = torch.zeros(self.lstm.num_layers, input_tensor.size(0), self.lstm.hidden_size).to(input_tensor.device)
         cell_state = torch.zeros(self.lstm.num_layers, input_tensor.size(0), self.lstm.hidden_size).to(input_tensor.device)
-
         for _ in range(max_output):
             next_token_id, (hidden_state, cell_state) = self.predict_next_token(
                 temperature=temperature, 
                 input_ids=input_tensor, 
                 state=(hidden_state, cell_state)  
             )
-
             if next_token_id in eos_token_ids:  
                 break
-
             generated_ids.append(next_token_id)  
             input_tensor = torch.tensor(data=[next_token_id], dtype=torch.long, device=self.device).unsqueeze(dim=0)
-
         generated_text = self.tokenizer.Decode(input=generated_ids, out_type=str)
         return generated_text
