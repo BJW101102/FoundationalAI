@@ -112,13 +112,29 @@ class TransformerModule(BaseModel):
         Generates a continuation for a given prompt using autoregressive decoding.
         """
         self.eval()
-        generated_ids = []
+        
+        # Encode the prompt into token ids using the tokenizer
         input_token_ids = self.tokenizer.Encode(input=prompt, out_type=int)  
         input_tensor = torch.tensor(data=input_token_ids, dtype=torch.long, device=self.device).unsqueeze(dim=0)
+
+        # Initialize the list to hold the generated token ids (starting with the prompt)
+        generated_ids: list = input_token_ids
+        
         for _ in range(max_output):
-            next_token_id = self.predict_next_token(input_ids=input_tensor, temperature=temperature)
+            # Only pass the previously generated tokens (not the full prompt)
+            # Pass the last generated token as input for autoregressive generation
+            target_tensor = torch.tensor([generated_ids[-1:]], dtype=torch.long, device=self.device)
+
+            # Predict the next token using the model (only based on the generated tokens)
+            next_token_id = self.predict_next_token(input_ids=target_tensor, temperature=temperature)
+            
+            # Stop if the next token is in the end-of-sequence token list
             if next_token_id in eos_token_ids:
                 break
+            
+            # Append the next token to the list of generated tokens
             generated_ids.append(next_token_id)
+        
+        # Decode the generated token ids back to a string
         output = self.tokenizer.Decode(generated_ids, out_type=str)
         return output

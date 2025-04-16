@@ -7,7 +7,7 @@ TRAIN_FILE="./project_2/gutenburg/data/train.jsonl"
 
 # Define model types and corresponding epochs
 MODEL_TYPES=("rnn" "lstm" "transformer")
-EPOCHS=(30 30 50)
+EPOCHS=(30 30 30)
 
 # Clear existing GPU memory
 echo "Clearing GPU memory..."

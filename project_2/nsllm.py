@@ -1,6 +1,6 @@
-import json
-import torch
 from tqdm import tqdm
+import torch
+import json
 from models.base import BaseModel, perform_forward_pass
 from models.lstm import LSTMModule
 from models.rnn import RNNModule
@@ -8,6 +8,7 @@ from models.transformer import TransformerModule
 from sentencepiece import SentencePieceProcessor
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 from torch.nn import functional as F
+
 
 def evaluate(model: BaseModel, tokenizer: SentencePieceProcessor, model_type: str, dataset_path: str, max_output: int = 1):
     eos_token_ids = tokenizer.EncodeAsIds("<eos>")
@@ -26,20 +27,20 @@ def evaluate(model: BaseModel, tokenizer: SentencePieceProcessor, model_type: st
         prompt_ids = tokenizer.EncodeAsIds(prompt)
         target_ids = tokenizer.EncodeAsIds(expected)
         
-        # Generate output
-        generated_text = model.generate(
-            prompt=prompt,
-            max_output=max_output,
-            eos_token_ids=eos_token_ids
-        )
+        # # Generate output
+        # generated_text = model.generate(
+        #     prompt=prompt,
+        #     max_output=max_output,
+        #     eos_token_ids=eos_token_ids
+        # )
 
-        # Tokenize for BLEU
-        reference = expected.split()
-        candidate = generated_text.split()
+        # # Tokenize for BLEU
+        # reference = expected.split()
+        # candidate = generated_text.split()
 
-        # Calculate BLEU score for the current sample
-        bleu = sentence_bleu([reference], candidate, smoothing_function=SmoothingFunction().method1)
-        total_bleu += bleu
+        # # Calculate BLEU score for the current sample
+        # bleu = sentence_bleu([reference], candidate, smoothing_function=SmoothingFunction().method1)
+        # total_bleu += bleu
 
         # Calculating Perplexity
         input_tensor = torch.tensor([prompt_ids], dtype=torch.long).to(device)
