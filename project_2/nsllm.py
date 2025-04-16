@@ -98,5 +98,5 @@ if __name__ == '__main__':
         max_output=max_output,
         eos_token_ids=eos_token_ids # Fix this
     )
-    
+
     print(generated_text)
