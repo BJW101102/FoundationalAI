@@ -9,7 +9,7 @@ from models.base import perform_forward_pass
 from models.rnn import RNNModule
 from models.lstm import LSTMModule
 from models.transformer import TransformerModule
-from datasetup.dataset import TextDataset
+from dataprep.dataset import TextDataset
 from sentencepiece import SentencePieceProcessor
 from torch.utils.data import DataLoader, random_split
 

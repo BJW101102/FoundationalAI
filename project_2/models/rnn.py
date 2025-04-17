@@ -48,18 +48,34 @@ class RNNModule(BaseModel):
 
         return logits, current_hidden        
 
-    def predict_next_token(self, temperature: float, input_ids: list[int], hidden=None) -> Tuple[Number, Tensor]:
-        self.eval()
+    def predict_next_token(self, temperature: float, input_ids: list[int], hidden:Tensor=None) -> Tuple[Number, Tensor]:
+        """
+        Predicts the next token in the sequence given the current input_ids.
 
+        :param temperature(float): Sampling temperature. Higher values increase randomness.
+        :param input_ids (list[int]): List of token IDs representing the input sequence.
+        :param hidden(Tensor): The hidden state, default is None for first iteration.
+        :return predicted_token(Number), hidden(Tensor): The predicted token and the hidden state.
+        """
+        self.eval()
         with torch.no_grad():
             logits, hidden = self.forward(input_ids=input_ids, prev_hidden=hidden, temperature=temperature)
+            logits = logits[:, -1, :]
+            probabilities = torch.softmax(logits, dim=-1)
 
-            # Apply softmax to get probabilities & sample from the distribution
-            top_k = 50
-            probabilities = F.softmax(logits, dim=-1)[0, -1]  # Last timestamp
-            top_k_probs, top_k_indices = torch.topk(probabilities, top_k)
-            predicted_token_id = top_k_indices[torch.multinomial(input=top_k_probs, num_samples=1)]
-
+            # Nucleus Sampling
+            sorted_probs, sorted_indices = torch.sort(probabilities, descending=True)
+            cumulative_probs = torch.cumsum(sorted_probs, dim=-1)
+            cutoff = cumulative_probs > 0.9
+            if torch.any(cutoff):
+                cutoff_index = torch.min(torch.where(cutoff)[1]) + 1
+            else:
+                cutoff_index = sorted_probs.shape[-1]
+            filtered_probs = sorted_probs[:, :cutoff_index]
+            filtered_indices = sorted_indices[:, :cutoff_index]
+            filtered_probs = filtered_probs / torch.sum(filtered_probs, dim=-1, keepdim=True)
+            sampled_token_idx = torch.multinomial(filtered_probs, num_samples=1)
+            predicted_token_id = filtered_indices[0, sampled_token_idx]
         return predicted_token_id.item(), hidden
     
     def generate(self, prompt: str, max_output: int, eos_token_ids: list[int], temperature: float=0.8):

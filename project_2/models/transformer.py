@@ -36,7 +36,6 @@ class TransformerModule(BaseModel):
         dropout: float = 0.1, 
         pad_token_id: int = 0,
         model_path: str = None):
-
         super(TransformerModule, self).__init__(
             device=device,
             tokenizer=tokenizer,
@@ -45,9 +44,7 @@ class TransformerModule(BaseModel):
             fc_in_features=embed_dim, 
             pad_token_id=pad_token_id
         )  
-        
         self.pos_encoder = PositionalEncoding(embed_dim, dropout)
-        
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=embed_dim,
             nhead=num_heads,
@@ -55,12 +52,9 @@ class TransformerModule(BaseModel):
             dropout=dropout,
             batch_first=True
         )
-        
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
-        
         if model_path:
             self.load_state_dict(torch.load(model_path, map_location=device))
-        
         self.to(device)
     
     def forward(self, input_ids: Tensor, temperature: float = 0.8) -> Tensor:
@@ -84,7 +78,7 @@ class TransformerModule(BaseModel):
         # Step 4: Pass the embeddings through stacked Transformer blocks with causal masking
         output = self.encoder.forward(pos_emb, mask=causal_mask)
 
-        # Step 5: Project the final hidden states to vocabulary logits using a linear layer
+        # Step 5: Project the final decoder outputs to vocabulary logits using a linear layer
         logits = self.fc.forward(output)
 
         # Step 6: Scale the logits by temperature to control randomness during sampling
@@ -92,37 +86,33 @@ class TransformerModule(BaseModel):
         
         return logits
 
-    def predict_next_token(self, input_ids: Tensor, temperature: float) -> Tuple[Number, None]:
+    def predict_next_token(self, input_ids: Tensor, temperature: float) -> Number:
         """
-        Predicts the next token from the input sequence using temperature-based sampling.
+        Predicts the next token in the sequence given the current input_ids.
+
+        :param temperature(float): Sampling temperature. Higher values increase randomness.
+        :param input_ids (list[int]): List of token IDs representing the input sequence.
+        :return predicted_token(Number): The predicted token 
         """
         self.eval()
         with torch.no_grad():
             logits = self.forward(input_ids=input_ids, temperature=temperature)
-            #now we grab the last token of the sequence
             logits = logits[:, -1, :]
-            probs = torch.softmax(logits, dim=-1)
-            #sort tokens from highest to lowest probability
-            sorted_probs, sorted_indices = torch.sort(probs, descending=True)
-            #cumulative sum of the sorted probabilities
+            probabilities = torch.softmax(logits, dim=-1)
+
+            # Nucleus Sampling
+            sorted_probs, sorted_indices = torch.sort(probabilities, descending=True)
             cumulative_probs = torch.cumsum(sorted_probs, dim=-1)
-            #the smallest set where cumulative prob exceeds top_p
             cutoff = cumulative_probs > 0.9
             if torch.any(cutoff):
                 cutoff_index = torch.min(torch.where(cutoff)[1]) + 1
             else:
                 cutoff_index = sorted_probs.shape[-1]
-           
-            # Slice to get the nucleus set
             filtered_probs = sorted_probs[:, :cutoff_index]
             filtered_indices = sorted_indices[:, :cutoff_index]
-
-            # Re-normalize
             filtered_probs = filtered_probs / torch.sum(filtered_probs, dim=-1, keepdim=True)
-
             sampled_token_idx = torch.multinomial(filtered_probs, num_samples=1)
             predicted_token_id = filtered_indices[0, sampled_token_idx]
-            
         return predicted_token_id.item()
 
     def generate(self, prompt: str, max_output: int, eos_token_ids: list[int], temperature: float = 0.8) -> str:
@@ -131,13 +121,10 @@ class TransformerModule(BaseModel):
         Only the newly generated text (excluding the prompt) is returned.
         """
         self.eval()
-        
-        # Encode the prompt into token ids using the tokenizer
         input_ids = self.tokenizer.Encode(input=prompt, out_type=int)
         input_tensor = torch.tensor(input_ids, dtype=torch.long, device=self.device).unsqueeze(0).to(self.device)
         generated_ids = []
         for _ in range(max_output):
-            # Predict the next token using the model
             next_token_id = self.predict_next_token(input_ids=input_tensor, temperature=temperature)
             if next_token_id in eos_token_ids:
                 break
